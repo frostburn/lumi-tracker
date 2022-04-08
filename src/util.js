@@ -10,19 +10,19 @@ export function mosMonzoToEtStep(monzo, l, s) {
 }
 
 const LYDIAN = "FCGDAEB";
-const LYDIAN_INDEX_A = LYDIAN.indexOf("A");
-const REFERENCE_OCTAVE = 4;
+const LYDIAN_INDEX_C = LYDIAN.indexOf("C");
+const REFERENCE_OCTAVE = 3;
 const SHARP_FIFTHS = 7;
 const SHARP_OCTAVES = -4;
 
-const OCTAVE_CORRECTIONS = [-2, -1, -1, 0, 0, 1, 1];
+const OCTAVE_CORRECTIONS = [-1, 0, 0, 1, 1, 2, 2];
 
 export function mosMonzoToDiatonic(monzo) {
     const [coordL, coordS] = monzo;
     const fifths = 2*coordL - 5*coordS;
     let octaves = 3*coordS - coordL + REFERENCE_OCTAVE;
 
-    let index = fifths + LYDIAN_INDEX_A;
+    let index = fifths + LYDIAN_INDEX_C;
     octaves += OCTAVE_CORRECTIONS[mod(index, LYDIAN.length)];
     const letter = LYDIAN[mod(index, LYDIAN.length)];
     let accidental = "";
@@ -51,3 +51,5 @@ export function mosMonzoToDiatonic(monzo) {
     }
     return letter + accidental + octaves.toString(16);
 }
+
+// TODO: TAMNAMS J3 at [0, 0]

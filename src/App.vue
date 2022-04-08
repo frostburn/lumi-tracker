@@ -13,16 +13,16 @@ export default {
       s: 1,
       tracks : [
         [
-          {monzo: [0, 0], velocity: 0xFF},  // A4
+          {monzo: [0, 0], velocity: 0xFF},  // C3
           null,
-          {monzo: [1, 0], velocity: 0xE0},  // B4
+          {monzo: [1, 0], velocity: 0xE0},  // D3
           NOTE_OFF,
-          {monzo: [1, 1], velocity: 0xD0},  // C5
-          {monzo: [2, 1], velocity: 0xC0},  // D5
-          {monzo: [3, 1], velocity: 0xB0},  // E5
-          {monzo: [3, 2], velocity: 0xA0},  // F5
-          {monzo: [4, 2], velocity: 0x90},  // G5
-          {monzo: [5, 2], velocity: 0x80},  // A5
+          {monzo: [2, 0], velocity: 0xD0},  // E3
+          {monzo: [2, 1], velocity: 0xC0},  // F3
+          {monzo: [3, 1], velocity: 0xB0},  // G3
+          {monzo: [4, 1], velocity: 0xA0},  // A3
+          {monzo: [5, 1], velocity: 0x90},  // B3
+          {monzo: [5, 2], velocity: 0x80},  // C4
         ],
         [
           {monzo: [0, 1], velocity:0x80},
@@ -32,8 +32,8 @@ export default {
           NOTE_OFF,
           null,
           null,
-          {monzo: [1, 2], velocity:0x70},
-          {monzo: [2, 0], velocity:0x70},
+          {monzo: [1, 3], velocity:0x70},
+          {monzo: [2, -2], velocity:0x70},
           null,
         ]
       ],

@@ -1,6 +1,7 @@
 <script>
 import Track from "./components/Track.vue";
 import { NOTE_OFF, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./util.js";
+import { suspendAudio, resumeAudio, playFrequencies } from "./audio.js";
 
 export default {
   components: {
@@ -41,9 +42,12 @@ export default {
     }
     */
     return {
+      cancelCallbacks: [],
       mosPattern: "LsLsLsL",
       l: 5,
       s: 2,
+      equave: 2,
+      baseFrequency: 220 * 2**0.25,
       tracks: [
         [
           {monzo: [0, 0], velocity: 0xFF},  // J3
@@ -56,14 +60,14 @@ export default {
           {monzo: [4, 3], velocity: 0xFF},  // J4
         ],
         [
-          {monzo: [0, 1], velocity: 0x80},
-          {monzo: [1, -1], velocity: 0x80},
-          {monzo: [1, 2], velocity: 0x80},
-          {monzo: [2, -1], velocity: 0x80},
-          {monzo: [2, -2], velocity: 0x80},
-          {monzo: [3, 1], velocity: 0x80},
-          {monzo: [3, 0], velocity: 0x80},
-          {monzo: [3, 5], velocity: 0x80},
+          {monzo: [-4, -3], velocity: 0x80},
+          null,
+          null,
+          null,
+          NOTE_OFF,
+          null,
+          null,
+          null,
         ],
       ]
     }
@@ -110,13 +114,52 @@ export default {
         }));
       });
       return result;
+    },
+    tracksWithFrequencies() {
+      const result = [];
+      let freq = this.baseFrequency;
+      let velocity = 0.0;
+      this.tracks.forEach(cells => {
+        result.push(cells.map(cell => {
+          if (cell === NOTE_OFF) {
+            velocity = 0;
+          } else if (cell !== null) {
+            const step = this.l * cell.monzo[0] + this.s * cell.monzo[1];
+            freq = this.baseFrequency * this.equave ** (step / this.divisions);
+            velocity = cell.velocity / 0xFF;
+          }
+          return {freq, velocity};
+        }));
+      });
+      return result;
+    },
+  },
+  methods: {
+    cancelPlay() {
+      this.cancelCallbacks.forEach(cb => cb());
+    },
+    play() {
+      this.stop();
+      this.tracksWithFrequencies.forEach(track => this.cancelCallbacks.push(playFrequencies(track)));
+      resumeAudio();
+    },
+    stop() {
+      this.cancelPlay();
+      suspendAudio();
     }
   },
 };
 </script>
 
 <template>
-  <Track v-for="cells of tracksWithNotes" :cells="cells" />
+  <div>
+    <button @click="play">play</button>
+    <button @click="stop">stop</button>
+  </div>
+  <div class="break"/>
+  <div>
+    <Track v-for="cells of tracksWithNotes" :cells="cells" />
+  </div>
 </template>
 
 <style>
@@ -128,6 +171,14 @@ export default {
   padding: 2rem;
 
   font-weight: normal;
+}
+
+.break {
+  clear: both;
+}
+
+button {
+  float: left;
 }
 
 header {

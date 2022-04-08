@@ -17,6 +17,7 @@ export default {
 
 <style scoped>
     table {
+        float: left;
         background: black;
         border-collapse: collapse;
     }

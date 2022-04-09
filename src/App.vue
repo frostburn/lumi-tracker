@@ -1,7 +1,10 @@
 <script>
+import { WebMidi } from "webmidi";
+
 import Track from "./components/Track.vue";
-import { NOTE_OFF, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./util.js";
-import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction } from "./audio.js";
+import { NOTE_OFF, REFERENCE_FREQUENCY, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./util.js";
+import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, Monophone } from "./audio.js";
+import { WHITE_MIDDLE_C, midiNumberToWhite } from "./midi.js";
 
 export default {
   components: {
@@ -9,12 +12,16 @@ export default {
   },
   data() {
     return {
+      instrument: new Monophone(),
+      midiNoteOffCallbacks: new Map(),
+      midiInputs: [],
+      midiInput: null,
       cancelCallbacks: [],
       mosPattern: "LsLsLsL",
       l: 5,
       s: 2,
       equave: 2,
-      baseFrequency: 220 * 2**0.25,
+      baseFrequency: REFERENCE_FREQUENCY,
       beatsPerMinute: 120,
       audioDelay: 0.05,
       playing: false,
@@ -168,8 +175,56 @@ export default {
     stop() {
       this.cancelPlay();
       window.setTimeout(suspendAudio, 100);
-    }
+    },
+    selectMidiInput(event) {
+      const id = event.target.value;
+      this.midiInput = WebMidi.getInputById(id);
+    },
+    scaleStepToFrequency(step) {
+        const equaves = Math.floor(step / this.mosPattern.length);
+        step -= equaves * this.mosPattern.length;
+        let edoStep = 0;
+        for (let i = 0; i < step; ++i) {
+          if (this.mosPattern[i] == "L") {
+            edoStep += this.l;
+          } else {
+            edoStep += this.s;
+          }
+        }
+        return this.baseFrequency * this.equave**equaves * this.equave**(edoStep / this.divisions);
+    },
+    velocityCurve(velocity) {
+      return Math.sqrt(velocity) * 0.9 + 0.1;
+    },
+    arm() {
+      if (this.midiInput === null) {
+        return;
+      }
+      resumeAudio();
+      function noteOn(e) {
+        const white = midiNumberToWhite(e.note.number);
+        if (white.number === null) {
+          return;
+        }
+        const frequency = this.scaleStepToFrequency(white.number - WHITE_MIDDLE_C);
+        const noteOff = this.instrument.noteOn(frequency, this.velocityCurve(e.note.attack));
+        this.midiNoteOffCallbacks.set(e.note.number, noteOff);
+      }
+      this.midiInput.addListener("noteon", noteOn.bind(this));
+
+      function noteOff(e) {
+        if (this.midiNoteOffCallbacks.has(e.note.number)) {
+          this.midiNoteOffCallbacks.get(e.note.number)();
+          this.midiNoteOffCallbacks.delete(e.note.number);
+        }
+      }
+      this.midiInput.addListener("noteoff", noteOff.bind(this));
+    },
   },
+  async mounted() {
+    await WebMidi.enable();
+    this.midiInputs = WebMidi.inputs;
+  }
 };
 </script>
 
@@ -181,6 +236,16 @@ export default {
   <div class="break"/>
   <div>
     <Track v-for="cells of cellsWithNotes" :cells="cells" :activeRow="activeRow" />
+  </div>
+  <div class="break"/>
+  <div>
+    <h1>MIDI Input</h1>
+    <select @change="selectMidiInput">
+      <option disabled="disabled" selected="selected" value="">--Select device--</option>
+      <option v-for="input of midiInputs" :value="input.id">{{ (input.manufacturer || "(Generic)") + ": " + input.name }}</option>
+    </select>
+    <div class="break"/>
+    <button @click="arm">rec</button>
   </div>
 </template>
 

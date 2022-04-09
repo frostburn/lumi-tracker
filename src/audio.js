@@ -80,3 +80,54 @@ export function playFrequencies(cells, instrument, beatDuration, delay) {
 
     return cancel;
 }
+
+export class Monophone {
+    constructor(frequencyGlide=0.009, amplitudeGlide=0.005) {
+        this.frequencyGlide = frequencyGlide;
+        this.amplitudeGlide = amplitudeGlide;
+        const ctx = getAudioContext();
+        this.oscillator = obtainOscillator();
+        this.oscillator.type = "triangle";
+        this.envelope = ctx.createGain();
+        this.envelope.gain.setValueAtTime(0, ctx.currentTime);
+        this.oscillator.connect(this.envelope).connect(ctx.destination);
+        this.stack = [];
+    }
+
+    noteOn(frequency, velocity) {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        this.envelope.gain.cancelScheduledValues(now);
+        this.envelope.gain.setTargetAtTime(0.5*velocity, now, this.amplitudeGlide);
+        if (this.stack.length) {
+            this.oscillator.frequency.setTargetAtTime(frequency, now, this.frequencyGlide);
+        } else {
+            this.oscillator.frequency.setValueAtTime(frequency, now);
+        }
+        const id = Symbol();
+        const voice = {frequency, velocity, id};
+        this.stack.push(voice);
+
+        function noteOff() {
+            const then = ctx.currentTime;
+            if (!this.stack.length) {
+                console.log("Warning: Note off with an empty stack");
+                this.envelope.gain.setTargetAtTime(0, then, this.amplitudeGlide);
+            }
+            if (this.stack[this.stack.length - 1].id === id) {
+                this.stack.pop();
+                if (!this.stack.length) {
+                    this.envelope.gain.setTargetAtTime(0, then, this.amplitudeGlide);
+                    return;
+                }
+                const topVoice = this.stack[this.stack.length - 1];
+                this.oscillator.frequency.setTargetAtTime(topVoice.frequency, then, this.frequencyGlide);
+                this.envelope.gain.setTargetAtTime(0.5*topVoice.velocity, then, this.amplitudeGlide);
+            } else {
+                this.stack.splice(this.stack.indexOf(voice), 1);
+            }
+        }
+
+        return noteOff.bind(this);
+    }
+}

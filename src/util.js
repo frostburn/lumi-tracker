@@ -4,6 +4,10 @@ export function mod(n, m) {
 
 export const NOTE_OFF = Symbol();
 
+// Make C4 the reference pitch with A4=440Hz
+export const REFERENCE_OCTAVE = 4;
+export const REFERENCE_FREQUENCY = 220 * 2**0.25;
+
 export function mosMonzoToEtStep(monzo, l, s) {
     const [coordL, coordS] = monzo;
     return coordL*l + coordS*s;
@@ -11,7 +15,6 @@ export function mosMonzoToEtStep(monzo, l, s) {
 
 const FIFTHS_CHAIN = "FCGDAEB";
 const FIFTHS_CHAIN_INDEX_C = FIFTHS_CHAIN.indexOf("C");
-const REFERENCE_OCTAVE = 3;
 const SHARP_FIFTHS = 7;
 const SHARP_OCTAVES = -4;
 

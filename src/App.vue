@@ -2,6 +2,7 @@
 import { WebMidi } from "webmidi";
 
 import Track from "./components/Track.vue";
+import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
 import { NOTE_OFF, REFERENCE_FREQUENCY, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./util.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, Monophone } from "./audio.js";
 import { WHITE_MIDDLE_C, midiNumberToWhite } from "./midi.js";
@@ -9,6 +10,7 @@ import { WHITE_MIDDLE_C, midiNumberToWhite } from "./midi.js";
 export default {
   components: {
     Track,
+    DiatonicKeyboard,
   },
   data() {
     return {
@@ -16,6 +18,8 @@ export default {
       midiNoteOffCallbacks: new Map(),
       midiInputs: [],
       midiInput: null,
+      activeMidiKeys: new Set(),
+      onScreenNoteOffCallback: null,
       cancelCallbacks: [],
       mosPattern: "LsLsLsL",
       l: 5,
@@ -112,6 +116,13 @@ export default {
     },
     beatDuration() {
       return 60 / this.beatsPerMinute;
+    },
+    activeMiniKeys() {
+      const result = new Set();
+      for (const key of this.activeMidiKeys) {
+        result.add((key + 12) % 24);
+      }
+      return result;
     }
   },
   methods: {
@@ -202,6 +213,7 @@ export default {
       }
       resumeAudio();
       function noteOn(e) {
+        this.activeMidiKeys.add(e.note.number);
         const white = midiNumberToWhite(e.note.number);
         if (white.number === null) {
           return;
@@ -213,6 +225,7 @@ export default {
       this.midiInput.addListener("noteon", noteOn.bind(this));
 
       function noteOff(e) {
+        this.activeMidiKeys.delete(e.note.number);
         if (this.midiNoteOffCallbacks.has(e.note.number)) {
           this.midiNoteOffCallbacks.get(e.note.number)();
           this.midiNoteOffCallbacks.delete(e.note.number);
@@ -220,8 +233,24 @@ export default {
       }
       this.midiInput.addListener("noteoff", noteOff.bind(this));
     },
+    onScreenNoteOn(number) {
+      resumeAudio();
+      const white = midiNumberToWhite(number);
+      if (white.number === null) {
+        return;
+      }
+      const frequency = this.scaleStepToFrequency(white.number);
+      this.onScreenNoteOffCallback = this.instrument.noteOn(frequency, 0.9);
+    }
   },
   async mounted() {
+    function onMouseUp() {
+      if (this.onScreenNoteOffCallback !== null) {
+        this.onScreenNoteOffCallback();
+        this.onScreenNoteOffCallback = null;
+      }
+    }
+    window.addEventListener("mouseup", onMouseUp.bind(this));
     await WebMidi.enable();
     this.midiInputs = WebMidi.inputs;
   }
@@ -246,6 +275,10 @@ export default {
     </select>
     <div class="break"/>
     <button @click="arm">rec</button>
+  </div>
+  <div class="break"/>
+  <div>
+    <DiatonicKeyboard @noteOn="onScreenNoteOn" :activeKeys="activeMiniKeys"/>
   </div>
 </template>
 

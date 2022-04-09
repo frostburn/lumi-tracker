@@ -5,13 +5,13 @@ export default {
     components: {
         TrackCell,
     },
-    props: ["cells"],
+    props: ["cells", "activeRow"],
 }
 </script>
 
 <template>
     <table>
-        <TrackCell v-for="cell of cells" v-bind=cell />
+        <TrackCell v-for="(cell, index) of cells" v-bind=cell :active="index === activeRow" />
     </table>
 </template>
 

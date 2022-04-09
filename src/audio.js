@@ -48,7 +48,10 @@ export function scheduleAction(when, action) {
     function fire(time) {
         dummy.stop(time);
     }
-    return fire;
+    function cancel() {
+        dummy.removeEventListener("ended", action);
+    }
+    return [fire, cancel];
 }
 
 export function playFrequencies(cells, instrument, beatDuration, delay) {
@@ -69,7 +72,7 @@ export function playFrequencies(cells, instrument, beatDuration, delay) {
     });
     amplitude.gain.setTargetAtTime(0.0, time, instrument.amplitudeGlide);
 
-    const cancel = scheduleAction(time + instrument.amplitudeGlide*4, () => {
+    const [cancel, _] = scheduleAction(time + instrument.amplitudeGlide*4, () => {
         disposeOscillator(oscillator);
         amplitude.gain.setValueAtTime(0.0, ctx.currentTime);
         amplitude.disconnect();

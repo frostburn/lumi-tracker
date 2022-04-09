@@ -1,7 +1,7 @@
 <script>
 import Track from "./components/Track.vue";
 import { NOTE_OFF, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./util.js";
-import { suspendAudio, resumeAudio, playFrequencies } from "./audio.js";
+import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction } from "./audio.js";
 
 export default {
   components: {
@@ -17,6 +17,9 @@ export default {
       baseFrequency: 220 * 2**0.25,
       beatsPerMinute: 120,
       audioDelay: 0.05,
+      playing: false,
+      activeRow: null,
+      cancelRowCallback: null,
       tracks: [
         {
           instrument: {
@@ -128,9 +131,15 @@ export default {
       return result;
     },
     cancelPlay() {
+      if (this.cancelRowCallback) {
+        this.cancelRowCallback();
+        this.cancelRowCallback = null;
+      }
       while (this.cancelCallbacks.length) {
         this.cancelCallbacks.pop()();
       }
+      this.playing = false;
+      this.activeRow = null;
     },
     play() {
       this.cancelPlay();
@@ -139,6 +148,21 @@ export default {
         const cells = this.cellsToFrequencies(track.cells);
         this.cancelCallbacks.push(playFrequencies(cells, track.instrument, this.beatDuration, this.audioDelay));
       });
+      this.playing = true;
+
+      const ctx = getAudioContext();
+      const startTime = ctx.currentTime;
+      function activateNextRow() {
+        if (!this.playing) {
+          return;
+        }
+        this.activeRow++;
+        const [fire, cancel] = scheduleAction(startTime + this.beatDuration * (this.activeRow + 1), activateNextRow.bind(this));
+        this.cancelRowCallback = cancel;
+      }
+      this.activeRow = -1;
+      activateNextRow.bind(this)();
+
       resumeAudio();
     },
     stop() {
@@ -156,7 +180,7 @@ export default {
   </div>
   <div class="break"/>
   <div>
-    <Track v-for="cells of cellsWithNotes" :cells="cells" />
+    <Track v-for="cells of cellsWithNotes" :cells="cells" :activeRow="activeRow" />
   </div>
 </template>
 

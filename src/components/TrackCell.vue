@@ -1,6 +1,6 @@
 <script>
 export default {
-    props: ['note', 'velocity'],
+    props: ['note', 'velocity', 'active'],
     computed: {
         hexVelocity() {
             if (isNaN(this.velocity)) {
@@ -13,7 +13,7 @@ export default {
 </script>
 
 <template>
-    <tr>
+    <tr :class="{active}">
         <td class="note">{{ note || "..." }}</td>
         <td class="velocity">{{ hexVelocity }}</td>
     </tr>
@@ -34,5 +34,9 @@ export default {
 
     .velocity {
         color: lightgreen;
+    }
+
+    .active {
+        background: darkgray;
     }
 </style>

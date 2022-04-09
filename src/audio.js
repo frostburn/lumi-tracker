@@ -51,24 +51,25 @@ export function scheduleAction(when, action) {
     return fire;
 }
 
-export function playFrequencies(track, delay=0.05) {
+export function playFrequencies(cells, instrument, beatDuration, delay) {
     const ctx = getAudioContext();
     const oscillator = obtainOscillator();
+    oscillator.type = instrument.waveform;
     const amplitude = ctx.createGain();
     amplitude.gain.setValueAtTime(0.0, ctx.currentTime);
     oscillator.connect(amplitude).connect(ctx.destination);
-    if (track.length) {
-        oscillator.frequency.setValueAtTime(track[0].freq, ctx.currentTime);
+    if (cells.length) {
+        oscillator.frequency.setValueAtTime(cells[0].frequency, ctx.currentTime);
     }
     let time = ctx.currentTime + delay;
-    track.forEach(cell => {
-        oscillator.frequency.setTargetAtTime(cell.freq, time, 0.005);
-        amplitude.gain.setTargetAtTime(cell.velocity*0.25, time, 0.02);
-        time += 0.2;
+    cells.forEach(cell => {
+        oscillator.frequency.setTargetAtTime(cell.frequency, time, instrument.frequencyGlide);
+        amplitude.gain.setTargetAtTime(cell.velocity*0.25, time, instrument.amplitudeGlide);
+        time += beatDuration;
     });
-    amplitude.gain.setTargetAtTime(0.0, time, 0.02);
+    amplitude.gain.setTargetAtTime(0.0, time, instrument.amplitudeGlide);
 
-    const cancel = scheduleAction(time + 0.5, () => {
+    const cancel = scheduleAction(time + instrument.amplitudeGlide*4, () => {
         disposeOscillator(oscillator);
         amplitude.gain.setValueAtTime(0.0, ctx.currentTime);
         amplitude.disconnect();

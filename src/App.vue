@@ -8,39 +8,6 @@ export default {
     Track,
   },
   data() {
-    /*
-    return {
-      mosPattern: "LsLLsLL",
-      l: 2,
-      s: 1,
-      tracks: [
-        [
-          {monzo: [0, 0], velocity: 0xFF},  // C3
-          null,
-          {monzo: [1, 0], velocity: 0xE0},  // D3
-          NOTE_OFF,
-          {monzo: [2, 0], velocity: 0xD0},  // E3
-          {monzo: [2, 1], velocity: 0xC0},  // F3
-          {monzo: [3, 1], velocity: 0xB0},  // G3
-          {monzo: [4, 1], velocity: 0xA0},  // A3
-          {monzo: [5, 1], velocity: 0x90},  // B3
-          {monzo: [5, 2], velocity: 0x80},  // C4
-        ],
-        [
-          {monzo: [0, 1], velocity:0x80},
-          {monzo: [1, -1], velocity:0x80},
-          null,
-          null,
-          NOTE_OFF,
-          null,
-          null,
-          {monzo: [1, 3], velocity:0x70},
-          {monzo: [2, -2], velocity:0x70},
-          null,
-        ]
-      ],
-    }
-    */
     return {
       cancelCallbacks: [],
       mosPattern: "LsLsLsL",
@@ -48,27 +15,45 @@ export default {
       s: 2,
       equave: 2,
       baseFrequency: 220 * 2**0.25,
+      beatsPerMinute: 120,
+      audioDelay: 0.05,
       tracks: [
-        [
-          {monzo: [0, 0], velocity: 0xFF},  // J3
-          {monzo: [1, 0], velocity: 0xFF},  // K3
-          {monzo: [1, 1], velocity: 0xFF},  // L3
-          {monzo: [2, 1], velocity: 0xFF},  // M3
-          {monzo: [2, 2], velocity: 0xFF},  // N3
-          {monzo: [3, 2], velocity: 0xFF},  // O3
-          {monzo: [3, 3], velocity: 0xFF},  // P3
-          {monzo: [4, 3], velocity: 0xFF},  // J4
-        ],
-        [
-          {monzo: [-4, -3], velocity: 0x80},
-          null,
-          null,
-          null,
-          NOTE_OFF,
-          null,
-          null,
-          null,
-        ],
+        {
+          instrument: {
+            monophonic: true,
+            waveform: 'sine',
+            frequencyGlide: 0.01,
+            amplitudeGlide: 0.02,
+          },
+          cells: [
+            {monzo: [0, 0], velocity: 0xFF},  // J3
+            {monzo: [1, 0], velocity: 0xFF},  // K3
+            {monzo: [1, 1], velocity: 0xFF},  // L3
+            {monzo: [2, 1], velocity: 0xFF},  // M3
+            {monzo: [2, 2], velocity: 0xFF},  // N3
+            {monzo: [3, 2], velocity: 0xFF},  // O3
+            {monzo: [3, 3], velocity: 0xFF},  // P3
+            {monzo: [4, 3], velocity: 0xFF},  // J4
+          ],
+        },
+        {
+          instrument: {
+            monophonic: true,
+            waveform: 'triangle',
+            frequencyGlide: 0.01,
+            amplitudeGlide: 0.02,
+          },
+          cells: [
+            null,
+            {monzo: [-4, -3], velocity: 0x80},
+            null,
+            null,
+            NOTE_OFF,
+            null,
+            null,
+            null,
+          ],
+        },
       ]
     }
   },
@@ -97,10 +82,10 @@ export default {
         return mosMonzoToSmitonic;
       }
     },
-    tracksWithNotes() {
+    cellsWithNotes() {
       const result = [];
-      this.tracks.forEach(cells => {
-        result.push(cells.map(cell => {
+      this.tracks.forEach(track => {
+        result.push(track.cells.map(cell => {
           if (cell === null) {
             return {note: "", velocity: NaN};
           }
@@ -115,37 +100,50 @@ export default {
       });
       return result;
     },
-    tracksWithFrequencies() {
-      const result = [];
-      let freq = this.baseFrequency;
-      let velocity = 0.0;
-      this.tracks.forEach(cells => {
-        result.push(cells.map(cell => {
-          if (cell === NOTE_OFF) {
-            velocity = 0;
-          } else if (cell !== null) {
-            const step = this.l * cell.monzo[0] + this.s * cell.monzo[1];
-            freq = this.baseFrequency * this.equave ** (step / this.divisions);
-            velocity = cell.velocity / 0xFF;
-          }
-          return {freq, velocity};
-        }));
-      });
-      return result;
-    },
+    beatDuration() {
+      return 60 / this.beatsPerMinute;
+    }
   },
   methods: {
+    cellsToFrequencies(cells) {
+      let frequency = null;
+      let velocity = 0.0;
+      const result = cells.map(cell => {
+        if (cell === NOTE_OFF) {
+          velocity = 0;
+        } else if (cell !== null) {
+          const step = this.l * cell.monzo[0] + this.s * cell.monzo[1];
+          frequency = this.baseFrequency * this.equave ** (step / this.divisions);
+          velocity = cell.velocity / 0xFF;
+        }
+        return {frequency, velocity};
+      });
+      frequency = this.baseFrequency;
+      for (let i = result.length - 1; i >= 0; i--) {
+        if (result[i].frequency !== null) {
+          frequency = result[i].frequency;
+        }
+        result[i].frequency = frequency;
+      }
+      return result;
+    },
     cancelPlay() {
-      this.cancelCallbacks.forEach(cb => cb());
+      while (this.cancelCallbacks.length) {
+        this.cancelCallbacks.pop()();
+      }
     },
     play() {
-      this.stop();
-      this.tracksWithFrequencies.forEach(track => this.cancelCallbacks.push(playFrequencies(track)));
+      this.cancelPlay();
+      suspendAudio();
+      this.tracks.forEach(track => {
+        const cells = this.cellsToFrequencies(track.cells);
+        this.cancelCallbacks.push(playFrequencies(cells, track.instrument, this.beatDuration, this.audioDelay));
+      });
       resumeAudio();
     },
     stop() {
       this.cancelPlay();
-      suspendAudio();
+      window.setTimeout(suspendAudio, 100);
     }
   },
 };
@@ -158,7 +156,7 @@ export default {
   </div>
   <div class="break"/>
   <div>
-    <Track v-for="cells of tracksWithNotes" :cells="cells" />
+    <Track v-for="cells of cellsWithNotes" :cells="cells" />
   </div>
 </template>
 

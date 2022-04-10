@@ -1,3 +1,5 @@
+import { ratioToCents } from "./util.js";
+
 let AUDIO_CTX;
 // WebAudio API seems to have a bug where oscillators are not garbage collected.
 // Use a banking system to reuse oscillators as much as possible.
@@ -87,8 +89,12 @@ export class Monophone {
         this.amplitudeGlide = amplitudeGlide;
         const ctx = getAudioContext();
         this.oscillator = obtainOscillator();
+        this.oscillator.frequency.setValueAtTime(1000, ctx.currentTime);
         this.oscillator.type = "triangle";
-        this.detune = this.oscillator.detune;
+        this.pitchBend = ctx.createConstantSource();
+        this.pitchBend.start(ctx.currentTime);
+        this.pitchBend.connect(this.oscillator.detune);
+        this.detune = this.pitchBend.offset;
         this.envelope = ctx.createGain();
         this.envelope.gain.setValueAtTime(0, ctx.currentTime);
         this.oscillator.connect(this.envelope).connect(ctx.destination);
@@ -107,20 +113,23 @@ export class Monophone {
     dispose() {
         disposeOscillator(this.oscillator);
         disposeOscillator(this.vibratoOscillator);
+        this.pitchBend.disconnect();
+        this.pitchBend.stop();
     }
 
     noteOn(frequency, velocity) {
+        const cents = ratioToCents(frequency*0.001);
         const ctx = getAudioContext();
         const now = ctx.currentTime;
         this.envelope.gain.cancelScheduledValues(now);
         this.envelope.gain.setTargetAtTime(0.5*velocity, now, this.amplitudeGlide);
         if (this.stack.length) {
-            this.oscillator.frequency.setTargetAtTime(frequency, now, this.frequencyGlide);
+            this.oscillator.detune.setTargetAtTime(cents, now, this.frequencyGlide);
         } else {
-            this.oscillator.frequency.setValueAtTime(frequency, now);
+            this.oscillator.detune.setValueAtTime(cents, now);
         }
         const id = Symbol();
-        const voice = {frequency, velocity, id};
+        const voice = {cents, velocity, id};
         this.stack.push(voice);
 
         function noteOff() {
@@ -136,7 +145,7 @@ export class Monophone {
                     return;
                 }
                 const topVoice = this.stack[this.stack.length - 1];
-                this.oscillator.frequency.setTargetAtTime(topVoice.frequency, then, this.frequencyGlide);
+                this.oscillator.detune.setTargetAtTime(topVoice.cents, then, this.frequencyGlide);
                 this.envelope.gain.setTargetAtTime(0.5*topVoice.velocity, then, this.amplitudeGlide);
             } else {
                 this.stack.splice(this.stack.indexOf(voice), 1);

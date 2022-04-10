@@ -3,7 +3,7 @@ import { WebMidi } from "webmidi";
 
 import Track from "./components/Track.vue";
 import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
-import { NOTE_OFF, REFERENCE_FREQUENCY } from "./util.js";
+import { NOTE_OFF, REFERENCE_FREQUENCY, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, Monophone } from "./audio.js";
 import { WHITE_MIDDLE_C, midiNumberToWhite } from "./midi.js";
@@ -91,7 +91,7 @@ export default {
       return this.countL*this.l + this.countS*this.s;
     },
     equaveCents() {
-      return Math.log(this.equave) / Math.log(2) * 1200;
+      return ratioToCents(this.equave);
     },
     pitchBendDepth() {
       return (this.l*this.pitchBendMonzo[0] + this.s*this.pitchBendMonzo[1]) / this.divisions * this.equaveCents;

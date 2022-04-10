@@ -12,3 +12,9 @@ export function mosMonzoToEtStep(monzo, l, s) {
     const [coordL, coordS] = monzo;
     return coordL*l + coordS*s;
 }
+
+const NATS_TO_CENTS = 1200 / Math.LN2;
+
+export function ratioToCents(ratio) {
+    return Math.log(ratio) * NATS_TO_CENTS;
+}

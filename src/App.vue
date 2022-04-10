@@ -3,7 +3,8 @@ import { WebMidi } from "webmidi";
 
 import Track from "./components/Track.vue";
 import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
-import { NOTE_OFF, REFERENCE_FREQUENCY, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./util.js";
+import { NOTE_OFF, REFERENCE_FREQUENCY } from "./util.js";
+import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, Monophone } from "./audio.js";
 import { WHITE_MIDDLE_C, midiNumberToWhite } from "./midi.js";
 
@@ -84,7 +85,7 @@ export default {
       return count;
     },
     mos() {
-      return this.countL + "L" + this.countS + "s";
+      return this.countL + "L " + this.countS + "s";
     },
     divisions() {
       return this.countL*this.l + this.countS*this.s;
@@ -96,12 +97,13 @@ export default {
       return (this.l*this.pitchBendMonzo[0] + this.s*this.pitchBendMonzo[1]) / this.divisions * this.equaveCents;
     },
     notation() {
-      if (this.mos === "5L2s") {
+      if (this.mos === "5L 2s") {
         return mosMonzoToDiatonic;
       }
-      if (this.mos === "4L3s") {
-        return mosMonzoToSmitonic;
+      function notate(monzo) {
+        return mosMonzoToJ(this.mos, monzo)
       }
+      return notate;
     },
     cellsWithNotes() {
       const result = [];

@@ -88,10 +88,25 @@ export class Monophone {
         const ctx = getAudioContext();
         this.oscillator = obtainOscillator();
         this.oscillator.type = "triangle";
+        this.detune = this.oscillator.detune;
         this.envelope = ctx.createGain();
         this.envelope.gain.setValueAtTime(0, ctx.currentTime);
         this.oscillator.connect(this.envelope).connect(ctx.destination);
+
+        this.vibratoGain = ctx.createGain();
+        this.vibratoDepth = this.vibratoGain.gain;
+        this.vibratoDepth.setValueAtTime(0, ctx.currentTime);
+        this.vibratoOscillator = obtainOscillator();
+        this.vibratoOscillator.connect(this.vibratoGain).connect(this.oscillator.detune);
+        this.vibratoFrequency = this.vibratoOscillator.frequency;
+        this.vibratoFrequency.setValueAtTime(7, ctx.currentTime);
+
         this.stack = [];
+    }
+
+    dispose() {
+        disposeOscillator(this.oscillator);
+        disposeOscillator(this.vibratoOscillator);
     }
 
     noteOn(frequency, velocity) {

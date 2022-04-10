@@ -25,6 +25,7 @@ export default {
       l: 5,
       s: 2,
       equave: 2,
+      pitchBendMonzo: [1, 0],
       baseFrequency: REFERENCE_FREQUENCY,
       beatsPerMinute: 120,
       audioDelay: 0.05,
@@ -87,6 +88,12 @@ export default {
     },
     divisions() {
       return this.countL*this.l + this.countS*this.s;
+    },
+    equaveCents() {
+      return Math.log(this.equave) / Math.log(2) * 1200;
+    },
+    pitchBendDepth() {
+      return (this.l*this.pitchBendMonzo[0] + this.s*this.pitchBendMonzo[1]) / this.divisions * this.equaveCents;
     },
     notation() {
       if (this.mos === "5L2s") {
@@ -232,6 +239,20 @@ export default {
         }
       }
       this.midiInput.addListener("noteoff", noteOff.bind(this));
+
+      function pitchBend(e) {
+        const ctx = getAudioContext();
+        this.instrument.detune.setTargetAtTime(this.pitchBendDepth * e.value, ctx.currentTime, 0.0001);
+      }
+      this.midiInput.addListener("pitchbend", pitchBend.bind(this));
+
+      function controlChange(e) {
+        const ctx = getAudioContext();
+        if (e.subtype === "modulationwheelcoarse") {
+          this.instrument.vibratoDepth.setTargetAtTime(100 * e.value, ctx.currentTime, 0.005);
+        }
+      }
+      this.midiInput.addListener("controlchange", controlChange.bind(this));
     },
     onScreenNoteOn(number) {
       resumeAudio();
@@ -241,19 +262,26 @@ export default {
       }
       const frequency = this.scaleStepToFrequency(white.number);
       this.onScreenNoteOffCallback = this.instrument.noteOn(frequency, 0.9);
-    }
-  },
-  async mounted() {
-    function onMouseUp() {
+    },
+    onMouseUp() {
       if (this.onScreenNoteOffCallback !== null) {
         this.onScreenNoteOffCallback();
         this.onScreenNoteOffCallback = null;
       }
-    }
-    window.addEventListener("mouseup", onMouseUp.bind(this));
+    },
+  },
+  async mounted() {
+    window.addEventListener("mouseup", this.onMouseUp);
     await WebMidi.enable();
     this.midiInputs = WebMidi.inputs;
-  }
+  },
+  unmounted() {
+    this.instrument.dispose();
+    window.removeEventListener("mouseup", this.onMouseUp);
+    if (this.midiInput !== null) {
+      this.midiInput.removeListener();
+    }
+  },
 };
 </script>
 

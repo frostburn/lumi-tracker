@@ -15,6 +15,7 @@ export function availableWaveforms() {
 export function getAudioContext() {
     if (AUDIO_CTX === undefined) {
         AUDIO_CTX = new AudioContext({latencyHint: "interactive"});
+        AUDIO_CTX.suspend();
         createWaveforms();
     }
     return AUDIO_CTX;

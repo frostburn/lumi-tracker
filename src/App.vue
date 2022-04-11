@@ -3,10 +3,10 @@ import { WebMidi } from "webmidi";
 
 import Track from "./components/Track.vue";
 import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
-import { NOTE_OFF, REFERENCE_FREQUENCY, ratioToCents } from "./util.js";
+import { mod, NOTE_OFF, REFERENCE_FREQUENCY, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, Monophone } from "./audio.js";
-import { WHITE_MIDDLE_C, midiNumberToWhite } from "./midi.js";
+import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
 
 export default {
@@ -29,6 +29,7 @@ export default {
       l: 5,
       s: 2,
       equave: 2,
+      accidentals: "sharps",
       pitchBendMonzo: [1, 0],
       baseFrequency: REFERENCE_FREQUENCY,
       beatsPerMinute: 120,
@@ -226,14 +227,28 @@ export default {
     velocityCurve(velocity) {
       return Math.sqrt(velocity) * 0.9 + 0.1;
     },
+    midiNumberToMonzo(number) {
+      const white = midiNumberToWhite(number);
+      let monzo;
+      if (white.number === null) {
+        if (this.accidentals === "sharps") {
+          monzo = this.scaleStepToMonzo(white.sharpOf);
+          monzo[0]++;
+          monzo[1]--;
+        } else if (this.accidentals === "flats") {
+          monzo = this.scaleStepToMonzo(white.flatOf);
+          monzo[0]--;
+          monzo[1]++;
+        }
+      } else {
+        monzo = this.scaleStepToMonzo(white.number);
+      }
+      return monzo;
+    },
     midiNoteOn(event) {
       const number = event.note.number;
       this.activeMidiKeys.add(number);
-      const white = midiNumberToWhite(number);
-      if (white.number === null) {
-        return;
-      }
-      const monzo = this.scaleStepToMonzo(white.number - WHITE_MIDDLE_C);
+      const monzo = this.midiNumberToMonzo(number - MIDDLE_C);
       const noteOff = this.noteOn(monzo, this.velocityCurve(event.note.attack));
       if (this.midiNoteOffCallbacks.has(number)) {
         this.midiNoteOffCallbacks.get(number)();
@@ -272,11 +287,7 @@ export default {
     },
     onScreenNoteOn(number) {
       resumeAudio();
-      const white = midiNumberToWhite(number);
-      if (white.number === null) {
-        return;
-      }
-      const monzo = this.scaleStepToMonzo(white.number);
+      const monzo = this.midiNumberToMonzo(number);
       this.onScreenNoteOffCallback = this.noteOn(monzo, 0.9);
     },
     onMouseUp() {
@@ -296,12 +307,39 @@ export default {
       if (z !== 1) {
         return;
       }
-      if (y === 1) {
-        const monzo = this.scaleStepToMonzo(x + this.mosPattern.length);
-        const noteOff = this.noteOn(monzo, 0.9);
-        this.computerNoteOffCallbacks.set(event.coordinates, noteOff);
+      let monzo;
+      if (y === 0) {
+        const step = x + this.mosPattern.length;
+        if (this.mosPattern[mod(step - 1, this.mosPattern.length)] === "L") {
+          if (this.accidentals === "sharps") {
+            monzo = this.scaleStepToMonzo(step - 1);
+            monzo[0]++;
+            monzo[1]--;
+          } else if (this.accidentals === "flats") {
+            monzo = this.scaleStepToMonzo(step);
+            monzo[0]--;
+            monzo[1]++;
+          }
+        }
+      } else if (y === 1) {
+        monzo = this.scaleStepToMonzo(x + this.mosPattern.length);
+      } else if (y === 2) {
+        const step = x;
+        if (this.mosPattern[mod(step, this.mosPattern.length)] === "L") {
+          if (this.accidentals === "sharps") {
+            monzo = this.scaleStepToMonzo(step);
+            monzo[0]++;
+            monzo[1]--;
+          } else if (this.accidentals === "flats") {
+            monzo = this.scaleStepToMonzo(step + 1);
+            monzo[0]--;
+            monzo[1]++;
+          }
+        }
       } else if (y === 3) {
-        const monzo = this.scaleStepToMonzo(x + 1);
+        monzo = this.scaleStepToMonzo(x + 1);
+      }
+      if (monzo !== undefined) {
         const noteOff = this.noteOn(monzo, 0.9);
         this.computerNoteOffCallbacks.set(event.coordinates, noteOff);
       }
@@ -379,6 +417,14 @@ export default {
     <button @click="play">play</button>
     <button @click="stop">stop</button>
     <button @click="addTrack">add track</button>
+  </div>
+  <div class="break"/>
+  <div>
+    <input type="radio" id="sharps" value="sharps" v-model="accidentals" />
+    <label for="sharps">Sharps </label>
+
+    <input type="radio" id="flats" value="flats" v-model="accidentals" />
+    <label for="flats">Flats</label>
   </div>
   <div class="break"/>
   <div>

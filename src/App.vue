@@ -96,6 +96,12 @@ export default {
     divisions() {
       return this.countL*this.l + this.countS*this.s;
     },
+    natsL() {
+      return Math.log(this.equave) * this.l / this.divisions;
+    },
+    natsS() {
+      return Math.log(this.equave) * this.s / this.divisions;
+    },
     equaveCents() {
       return ratioToCents(this.equave);
     },
@@ -200,50 +206,55 @@ export default {
       const id = event.target.value;
       this.midiInput = WebMidi.getInputById(id);
     },
-    scaleStepToFrequency(step) {
+    scaleStepToMonzo(step) {
         const equaves = Math.floor(step / this.mosPattern.length);
         step -= equaves * this.mosPattern.length;
-        let edoStep = 0;
+        const monzo = [this.countL * equaves, this.countS * equaves];
         for (let i = 0; i < step; ++i) {
           if (this.mosPattern[i] == "L") {
-            edoStep += this.l;
+            monzo[0]++;
           } else {
-            edoStep += this.s;
+            monzo[1]++;
           }
         }
-        return this.baseFrequency * this.equave**equaves * this.equave**(edoStep / this.divisions);
+        return monzo;
+    },
+    noteOn(monzo, velocity) {
+      const frequency = this.baseFrequency * Math.exp(this.natsL * monzo[0] + this.natsS * monzo[1]);
+      return this.instrument.noteOn(frequency, velocity);
     },
     velocityCurve(velocity) {
       return Math.sqrt(velocity) * 0.9 + 0.1;
+    },
+    midiNoteOn(event) {
+      const number = event.note.number;
+      this.activeMidiKeys.add(number);
+      const white = midiNumberToWhite(number);
+      if (white.number === null) {
+        return;
+      }
+      const monzo = this.scaleStepToMonzo(white.number - WHITE_MIDDLE_C);
+      const noteOff = this.noteOn(monzo, this.velocityCurve(event.note.attack));
+      if (this.midiNoteOffCallbacks.has(number)) {
+        this.midiNoteOffCallbacks.get(number)();
+      }
+      this.midiNoteOffCallbacks.set(number, noteOff);
+    },
+    midiNoteOff(event) {
+      const number = event.note.number;
+      this.activeMidiKeys.delete(number);
+      if (this.midiNoteOffCallbacks.has(number)) {
+        this.midiNoteOffCallbacks.get(number)();
+        this.midiNoteOffCallbacks.delete(number);
+      }
     },
     arm() {
       if (this.midiInput === null) {
         return;
       }
       resumeAudio();
-      function noteOn(e) {
-        this.activeMidiKeys.add(e.note.number);
-        const white = midiNumberToWhite(e.note.number);
-        if (white.number === null) {
-          return;
-        }
-        const frequency = this.scaleStepToFrequency(white.number - WHITE_MIDDLE_C);
-        const noteOff = this.instrument.noteOn(frequency, this.velocityCurve(e.note.attack));
-        if (this.midiNoteOffCallbacks.has(e.note.number)) {
-          this.midiNoteOffCallbacks.get(e.note.number)();
-        }
-        this.midiNoteOffCallbacks.set(e.note.number, noteOff);
-      }
-      this.midiInput.addListener("noteon", noteOn.bind(this));
-
-      function noteOff(e) {
-        this.activeMidiKeys.delete(e.note.number);
-        if (this.midiNoteOffCallbacks.has(e.note.number)) {
-          this.midiNoteOffCallbacks.get(e.note.number)();
-          this.midiNoteOffCallbacks.delete(e.note.number);
-        }
-      }
-      this.midiInput.addListener("noteoff", noteOff.bind(this));
+      this.midiInput.addListener("noteon", this.midiNoteOn);
+      this.midiInput.addListener("noteoff", this.midiNoteOff);
 
       function pitchBend(e) {
         const ctx = getAudioContext();
@@ -265,8 +276,8 @@ export default {
       if (white.number === null) {
         return;
       }
-      const frequency = this.scaleStepToFrequency(white.number);
-      this.onScreenNoteOffCallback = this.instrument.noteOn(frequency, 0.9);
+      const monzo = this.scaleStepToMonzo(white.number);
+      this.onScreenNoteOffCallback = this.noteOn(monzo, 0.9);
     },
     onMouseUp() {
       if (this.onScreenNoteOffCallback !== null) {
@@ -286,12 +297,12 @@ export default {
         return;
       }
       if (y === 1) {
-        const frequency = this.scaleStepToFrequency(x + this.mosPattern.length);
-        const noteOff = this.instrument.noteOn(frequency, 0.9);
+        const monzo = this.scaleStepToMonzo(x + this.mosPattern.length);
+        const noteOff = this.noteOn(monzo, 0.9);
         this.computerNoteOffCallbacks.set(event.coordinates, noteOff);
       } else if (y === 3) {
-        const frequency = this.scaleStepToFrequency(x + 1);
-        const noteOff = this.instrument.noteOn(frequency, 0.9);
+        const monzo = this.scaleStepToMonzo(x + 1);
+        const noteOff = this.noteOn(monzo, 0.9);
         this.computerNoteOffCallbacks.set(event.coordinates, noteOff);
       }
     },

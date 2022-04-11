@@ -15,7 +15,7 @@ export default {
   },
   data() {
     return {
-      instrument: new Monophone(),
+      instrument: new Monophone("oddtheta3"),
       midiNoteOffCallbacks: new Map(),
       midiInputs: [],
       midiInput: null,
@@ -37,7 +37,7 @@ export default {
         {
           instrument: {
             monophonic: true,
-            waveform: 'sine',
+            waveform: 'theta2',
             frequencyGlide: 0.01,
             amplitudeGlide: 0.02,
           },
@@ -56,17 +56,17 @@ export default {
           instrument: {
             monophonic: true,
             waveform: 'triangle',
-            frequencyGlide: 0.01,
-            amplitudeGlide: 0.02,
+            frequencyGlide: 0.05,
+            amplitudeGlide: 0.05,
           },
           cells: [
             null,
             {monzo: [-4, -3], velocity: 0x80},
             null,
             null,
+            {monzo: [0, 0], velocity: 0x80},
             NOTE_OFF,
-            null,
-            null,
+            {monzo: [-4, -3], velocity: 0x80},
             null,
           ],
         },
@@ -140,6 +140,7 @@ export default {
       let velocity = 0.0;
       const result = cells.map(cell => {
         if (cell === NOTE_OFF) {
+          frequency = null;
           velocity = 0;
         } else if (cell !== null) {
           const step = this.l * cell.monzo[0] + this.s * cell.monzo[1];
@@ -148,13 +149,6 @@ export default {
         }
         return {frequency, velocity};
       });
-      frequency = this.baseFrequency;
-      for (let i = result.length - 1; i >= 0; i--) {
-        if (result[i].frequency !== null) {
-          frequency = result[i].frequency;
-        }
-        result[i].frequency = frequency;
-      }
       return result;
     },
     cancelPlay() {

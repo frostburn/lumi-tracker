@@ -5,9 +5,17 @@ let AUDIO_CTX;
 // Use a banking system to reuse oscillators as much as possible.
 const OSCILLATOR_BANK = [];
 
+const DEFAULT_WAVEFORMS = ["sine", "square", "sawtooth", "triangle"];
+const PERIODIC_WAVES = {};
+
+export function availableWaveforms() {
+    return Object.keys(PERIODIC_WAVES).concat(DEFAULT_WAVEFORMS);
+}
+
 export function getAudioContext() {
     if (AUDIO_CTX === undefined) {
         AUDIO_CTX = new AudioContext({latencyHint: "interactive"});
+        createWaveforms();
     }
     return AUDIO_CTX;
 }
@@ -22,13 +30,20 @@ export function resumeAudio() {
     ctx.resume();
 }
 
-function obtainOscillator() {
+function obtainOscillator(waveform="sine") {
+    let oscillator;
     if (OSCILLATOR_BANK.length) {
-        return OSCILLATOR_BANK.pop();
+        oscillator = OSCILLATOR_BANK.pop();
+    } else {
+        const ctx = getAudioContext();
+        oscillator = ctx.createOscillator();
+        oscillator.start(ctx.currentTime);
     }
-    const ctx = getAudioContext();
-    const oscillator = ctx.createOscillator();
-    oscillator.start(ctx.currentTime);
+    if (DEFAULT_WAVEFORMS.includes(waveform)) {
+        oscillator.type = waveform;
+    } else {
+        oscillator.setPeriodicWave(PERIODIC_WAVES[waveform]);
+    }
     return oscillator;
 }
 
@@ -56,19 +71,81 @@ export function scheduleAction(when, action) {
     return [fire, cancel];
 }
 
+// Set up custom waveforms. Adapted from:
+// https://github.com/SeanArchibald/scale-workshop/blob/master/src/js/synth/Synth.js
+function createWaveforms() {
+    PERIODIC_WAVES["warm1"] = AUDIO_CTX.createPeriodicWave(
+        new Float32Array([0, 10, 2, 2, 2, 1, 1, 0.5, 0.1]),
+        new Float32Array([0,  0, 0, 0, 0, 0, 0, 0.0, 0.0])
+    )
+    PERIODIC_WAVES["warm2"] = AUDIO_CTX.createPeriodicWave(
+        new Float32Array([0, 10, 5, 3.33, 2, 1, 0.2, 0.1]),
+        new Float32Array([0,  0, 0, 0.00, 0, 0, 0.0, 0.0])
+    )
+    PERIODIC_WAVES["warm3"] = AUDIO_CTX.createPeriodicWave(
+        new Float32Array([0, 10, 5, 5, 3, 0.2, 0.1]),
+        new Float32Array([0,  0, 0, 0, 0, 0.0, 0.0])
+    )
+    PERIODIC_WAVES["warm4"] = AUDIO_CTX.createPeriodicWave(
+        new Float32Array([0, 10, 2, 2, 1, 0.1]),
+        new Float32Array([0,  0, 0, 0, 0, 0.0])
+    )
+    PERIODIC_WAVES["octaver"] = AUDIO_CTX.createPeriodicWave(
+        new Float32Array([0,100,50,0,33,0,0,0,25,0,0,0,0,0,0,0,16]),
+        new Float32Array([0,  0, 0,0, 0,0,0,0, 0,0,0,0,0,0,0,0, 0])
+    )
+    PERIODIC_WAVES["brightness"] = AUDIO_CTX.createPeriodicWave(
+        new Float32Array([0,10,0,3,3,3,3,3,3,3,3,3,3,1,1,1,1,1,.75,.5,.2,.1]),
+        new Float32Array([0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,.00,.0,.0,.0])
+    )
+    PERIODIC_WAVES["harmonicbell"] = AUDIO_CTX.createPeriodicWave(
+        new Float32Array([0, 10, 2, 2, 2, 2,0,0,0,0,0,7]),
+        new Float32Array([0,  0, 0, 0, 0, 0,0,0,0,0,0,0])
+    )
+    PERIODIC_WAVES["semisine"] = AUDIO_CTX.createPeriodicWave(
+        new Float32Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        new Float32Array([0, 1, 0.25, 0.111111, 0.0625, 0.04, 0.027777, 0.020408, 0.015625, 0.0123456, 0.01, 0.008264, 0.0069444, 0.0059171, 0.005102041, 0.0044444, 0.00390625])
+    );
+
+    // Elliptic Theta 3
+    [1, 0.5, 0.25, 0.1, 0.05].forEach((softness, index) => {
+        const harmonics = [0];
+        let i = 1;
+        let value;
+        do {
+            value = Math.exp(-softness*i*i);
+            harmonics.push(value);
+            i += 1;
+        } while(value > 0.0001);
+        const zeroComponents = Array(harmonics.length).fill(0);
+        PERIODIC_WAVES["theta" + (index+1)] = AUDIO_CTX.createPeriodicWave(new Float32Array(zeroComponents), new Float32Array(harmonics));
+
+        for (let i = 0; i < harmonics.length; i += 2) {
+            harmonics[i] = 0;
+        }
+        PERIODIC_WAVES["oddtheta" + (index+1)] = AUDIO_CTX.createPeriodicWave(new Float32Array(harmonics), new Float32Array(zeroComponents));
+    });
+}
+
 export function playFrequencies(cells, instrument, beatDuration, delay) {
     const ctx = getAudioContext();
-    const oscillator = obtainOscillator();
-    oscillator.type = instrument.waveform;
+    const oscillator = obtainOscillator(instrument.waveform);
+    oscillator.frequency.setValueAtTime(1000, ctx.currentTime);
     const amplitude = ctx.createGain();
     amplitude.gain.setValueAtTime(0.0, ctx.currentTime);
     oscillator.connect(amplitude).connect(ctx.destination);
-    if (cells.length) {
-        oscillator.frequency.setValueAtTime(cells[0].frequency, ctx.currentTime);
-    }
+    let lastFrequency = null;
     let time = ctx.currentTime + delay;
     cells.forEach(cell => {
-        oscillator.frequency.setTargetAtTime(cell.frequency, time, instrument.frequencyGlide);
+        if (cell.frequency !== null) {
+            const cents = ratioToCents(cell.frequency*0.001);
+            if (lastFrequency === null) {
+                oscillator.detune.setValueAtTime(cents, time);
+            } else {
+                oscillator.detune.setTargetAtTime(cents, time, instrument.frequencyGlide);
+            }
+        }
+        lastFrequency = cell.frequency;
         amplitude.gain.setTargetAtTime(cell.velocity*0.25, time, instrument.amplitudeGlide);
         time += beatDuration;
     });
@@ -84,13 +161,12 @@ export function playFrequencies(cells, instrument, beatDuration, delay) {
 }
 
 export class Monophone {
-    constructor(frequencyGlide=0.009, amplitudeGlide=0.005) {
+    constructor(waveform="triangle", frequencyGlide=0.009, amplitudeGlide=0.005) {
         this.frequencyGlide = frequencyGlide;
         this.amplitudeGlide = amplitudeGlide;
         const ctx = getAudioContext();
-        this.oscillator = obtainOscillator();
+        this.oscillator = obtainOscillator(waveform);
         this.oscillator.frequency.setValueAtTime(1000, ctx.currentTime);
-        this.oscillator.type = "triangle";
         this.pitchBend = ctx.createConstantSource();
         this.pitchBend.start(ctx.currentTime);
         this.pitchBend.connect(this.oscillator.detune);

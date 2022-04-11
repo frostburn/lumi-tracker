@@ -7,6 +7,7 @@ import { NOTE_OFF, REFERENCE_FREQUENCY, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, Monophone } from "./audio.js";
 import { WHITE_MIDDLE_C, midiNumberToWhite } from "./midi.js";
+import { Keyboard } from "./keyboard.js";
 
 export default {
   components: {
@@ -16,6 +17,8 @@ export default {
   data() {
     return {
       instrument: new Monophone("oddtheta3"),
+      computerKeyboard: null,
+      computerNoteOffCallbacks: new Map(),
       midiNoteOffCallbacks: new Map(),
       midiInputs: [],
       midiInput: null,
@@ -271,6 +274,32 @@ export default {
         this.onScreenNoteOffCallback = null;
       }
     },
+    windowKeydown(event) {
+      if (event.code === "Backquote") {
+        this.computerKeyboard.deactivate();
+      }
+    },
+    computerKeydown(event) {
+      resumeAudio();
+      const [x, y, z] = event.coordinates;
+      if (z !== 1) {
+        return;
+      }
+      if (y === 1) {
+        const frequency = this.scaleStepToFrequency(x + this.mosPattern.length);
+        const noteOff = this.instrument.noteOn(frequency, 0.9);
+        this.computerNoteOffCallbacks.set(event.coordinates, noteOff);
+      } else if (y === 3) {
+        const frequency = this.scaleStepToFrequency(x + 1);
+        const noteOff = this.instrument.noteOn(frequency, 0.9);
+        this.computerNoteOffCallbacks.set(event.coordinates, noteOff);
+      }
+    },
+    computerKeyup(event) {
+      if (this.computerNoteOffCallbacks.has(event.coordinates)) {
+        this.computerNoteOffCallbacks.get(event.coordinates)();
+      }
+    },
     addTrack() {
       this.tracks.push({
         instrument: {
@@ -311,12 +340,19 @@ export default {
   async mounted() {
     window.addEventListener("mouseup", this.onMouseUp);
     window.addEventListener("click", this.selectNothing);
+    this.computerKeyboard = new Keyboard();
+    this.computerKeyboard.addEventListener("keydown", this.computerKeydown);
+    this.computerKeyboard.addEventListener("keyup", this.computerKeyup);
+    window.addEventListener("keydown", this.windowKeydown);
     if (navigator.requestMIDIAccess !== undefined) {
       await WebMidi.enable();
       this.midiInputs = WebMidi.inputs;
     }
   },
   unmounted() {
+    this.computerKeyboard.removeEventListener("keydown", this.computerKeydown);
+    this.computerKeyboard.removeEventListener("keyup", this.computerKeyup);
+    this.computerKeyboard.dispose();
     this.instrument.dispose();
     window.removeEventListener("mouseup", this.onMouseUp);
     window.removeEventListener("click", this.selectNothing);

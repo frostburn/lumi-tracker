@@ -32,6 +32,9 @@ export default {
       audioDelay: 0.05,
       playing: false,
       activeRow: null,
+      activeColumn: null,
+      inputMode: null,
+      inputIndex: null,
       cancelRowCallback: null,
       tracks: [
         {
@@ -174,7 +177,7 @@ export default {
       const ctx = getAudioContext();
       const startTime = ctx.currentTime;
       function activateNextRow() {
-        if (!this.playing) {
+        if (!this.playing || this.activeRow >= this.tracks[0].cells.length) {
           return;
         }
         this.activeRow++;
@@ -268,9 +271,46 @@ export default {
         this.onScreenNoteOffCallback = null;
       }
     },
+    addTrack() {
+      this.tracks.push({
+        instrument: {
+          monophonic: true,
+          waveform: 'oddtheta4',
+          frequencyGlide: 0.01,
+          amplitudeGlide: 0.02,
+        },
+        cells: [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {monzo: [8, 6], velocity: 0x80},
+        ],
+      });
+    },
+    selectNote(columnIndex, rowIndex) {
+      this.activeColumn = columnIndex;
+      this.activeRow = rowIndex;
+      this.inputMode = "note";
+    },
+    selectVelocity(columnIndex, rowIndex, inputIndex) {
+      this.activeColumn = columnIndex;
+      this.activeRow = rowIndex;
+      this.inputIndex = inputIndex;
+      this.inputMode = "velocity";
+    },
+    selectNothing() {
+      this.activeColumn = null;
+      this.inputMode = null;
+      this.inputIndex = null;
+    }
   },
   async mounted() {
     window.addEventListener("mouseup", this.onMouseUp);
+    window.addEventListener("click", this.selectNothing);
     if (navigator.requestMIDIAccess !== undefined) {
       await WebMidi.enable();
       this.midiInputs = WebMidi.inputs;
@@ -279,6 +319,7 @@ export default {
   unmounted() {
     this.instrument.dispose();
     window.removeEventListener("mouseup", this.onMouseUp);
+    window.removeEventListener("click", this.selectNothing);
     if (this.midiInput !== null) {
       this.midiInput.removeListener();
     }
@@ -290,10 +331,20 @@ export default {
   <div>
     <button @click="play">play</button>
     <button @click="stop">stop</button>
+    <button @click="addTrack">add track</button>
   </div>
   <div class="break"/>
   <div>
-    <Track v-for="cells of cellsWithNotes" :cells="cells" :activeRow="activeRow" />
+    <Track
+      v-for="(cells, index) of cellsWithNotes" :cells="cells"
+      :key="index"
+      :active="index === activeColumn"
+      :activeRow="activeRow"
+      :inputMode="inputMode"
+      :inputIndex="inputIndex"
+      @noteClick="(i) => selectNote(index, i)"
+      @velocityClick="(i, j) => selectVelocity(index, i, j)"
+    />
   </div>
   <div class="break"/>
   <div>

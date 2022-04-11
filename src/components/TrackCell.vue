@@ -1,6 +1,7 @@
 <script>
 export default {
-    props: ['note', 'velocity', 'active'],
+    props: ['note', 'velocity', 'active', 'focused', 'inputMode', 'inputIndex'],
+    emits: ['noteClick', 'velocityClick'],
     computed: {
         hexVelocity() {
             if (isNaN(this.velocity)) {
@@ -14,8 +15,17 @@ export default {
 
 <template>
     <tr :class="{active}">
-        <td class="note">{{ note || "..." }}</td>
-        <td class="velocity">{{ hexVelocity }}</td>
+        <td
+            class="note"
+            :class="{ focused: focused && inputMode === 'note' }"
+            @click.stop="$emit('noteClick')"
+        >
+            {{ note || "..." }}
+        </td>
+        <td class="velocity" :class="{ focused: focused && inputMode === 'velocity' }">
+            <span :class="{ selected: inputIndex === 0 }" @click.stop="$emit('velocityClick', 0)">{{ hexVelocity[0] }}</span>
+            <span :class="{ selected: inputIndex === 1 }" @click.stop="$emit('velocityClick', 1)">{{ hexVelocity[1] }}</span>
+        </td>
     </tr>
 </template>
 
@@ -24,6 +34,7 @@ export default {
         border: 1px solid gray;
     }
     td {
+        cursor: default;
         color: lightgray;
         font-family: monospace;
     }
@@ -37,6 +48,14 @@ export default {
     }
 
     .active {
-        background: darkgray;
+        background: #333333;
+    }
+
+    .focused {
+        background: steelblue;
+    }
+
+    .focused .selected {
+        background: blue;
     }
 </style>

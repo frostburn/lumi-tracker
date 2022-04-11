@@ -229,6 +229,9 @@ export default {
         }
         const frequency = this.scaleStepToFrequency(white.number - WHITE_MIDDLE_C);
         const noteOff = this.instrument.noteOn(frequency, this.velocityCurve(e.note.attack));
+        if (this.midiNoteOffCallbacks.has(e.note.number)) {
+          this.midiNoteOffCallbacks.get(e.note.number)();
+        }
         this.midiNoteOffCallbacks.set(e.note.number, noteOff);
       }
       this.midiInput.addListener("noteon", noteOn.bind(this));

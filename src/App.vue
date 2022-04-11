@@ -271,8 +271,10 @@ export default {
   },
   async mounted() {
     window.addEventListener("mouseup", this.onMouseUp);
-    await WebMidi.enable();
-    this.midiInputs = WebMidi.inputs;
+    if (navigator.requestMIDIAccess !== undefined) {
+      await WebMidi.enable();
+      this.midiInputs = WebMidi.inputs;
+    }
   },
   unmounted() {
     this.instrument.dispose();

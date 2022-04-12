@@ -1,6 +1,10 @@
 import { ratioToCents } from "./util.js";
 
 let AUDIO_CTX;
+// WebAudio API especially on Firefox doesn't perfectly sync AUDIO_CTX.currentTime
+// with what's actually being heard. This causes clicks. This delay should help.
+let AUDIO_DELAY = 0.0;
+
 // WebAudio API seems to have a bug where oscillators are not garbage collected.
 // Use a banking system to reuse oscillators as much as possible.
 const OSCILLATOR_BANK = [];
@@ -29,6 +33,15 @@ export function suspendAudio() {
 export function resumeAudio() {
     const ctx = getAudioContext();
     ctx.resume();
+}
+
+export function setAudioDelay(value) {
+    AUDIO_DELAY = value;
+}
+
+export function safeNow() {
+    const ctx = getAudioContext();
+    return ctx.currentTime + AUDIO_DELAY;
 }
 
 function obtainOscillator(waveform="sine") {
@@ -128,7 +141,7 @@ function createWaveforms() {
     });
 }
 
-export function playFrequencies(cells, instrument, beatDuration, delay) {
+export function playFrequencies(cells, instrument, beatDuration) {
     const ctx = getAudioContext();
     const oscillator = obtainOscillator(instrument.waveform);
     oscillator.frequency.setValueAtTime(1000, ctx.currentTime);
@@ -136,7 +149,7 @@ export function playFrequencies(cells, instrument, beatDuration, delay) {
     amplitude.gain.setValueAtTime(0.0, ctx.currentTime);
     oscillator.connect(amplitude).connect(ctx.destination);
     let lastFrequency = null;
-    let time = ctx.currentTime + delay;
+    let time = safeNow();
     cells.forEach(cell => {
         if (cell.frequency !== null) {
             const cents = ratioToCents(cell.frequency*0.001);
@@ -197,7 +210,7 @@ export class Monophone {
     noteOn(frequency, velocity) {
         const cents = ratioToCents(frequency*0.001);
         const ctx = getAudioContext();
-        const now = ctx.currentTime;
+        const now = safeNow();
         this.envelope.gain.cancelScheduledValues(now);
         this.envelope.gain.setTargetAtTime(0.5*velocity, now, this.amplitudeGlide);
         if (this.stack.length) {
@@ -210,7 +223,7 @@ export class Monophone {
         this.stack.push(voice);
 
         function noteOff() {
-            const then = ctx.currentTime;
+            const then = safeNow();
             if (!this.stack.length) {
                 console.log("Warning: Note off with an empty stack");
                 this.envelope.gain.setTargetAtTime(0, then, this.amplitudeGlide);

@@ -5,7 +5,7 @@ import Track from "./components/Track.vue";
 import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
-import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, Monophone } from "./audio.js";
+import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, Monophone, setAudioDelay } from "./audio.js";
 import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
 
@@ -33,7 +33,7 @@ export default {
       pitchBendMonzo: [1, 0],
       baseFrequency: REFERENCE_FREQUENCY,
       beatsPerMinute: 120,
-      audioDelay: 0.05,
+      audioDelay: 5,
       playing: false,
       activeRow: null,
       activeColumn: null,
@@ -79,6 +79,14 @@ export default {
         },
       ]
     }
+  },
+  watch: {
+    audioDelay: {
+      handler(newValue) {
+        setAudioDelay(newValue / 1000);
+      },
+      immediate: true,
+    },
   },
   computed: {
     countL() {
@@ -180,7 +188,7 @@ export default {
       suspendAudio();
       this.tracks.forEach(track => {
         const cells = this.cellsToFrequencies(track.cells);
-        this.cancelCallbacks.push(playFrequencies(cells, track.instrument, this.beatDuration, this.audioDelay));
+        this.cancelCallbacks.push(playFrequencies(cells, track.instrument, this.beatDuration));
       });
       this.playing = true;
 
@@ -414,6 +422,11 @@ export default {
 
 <template>
   <div>
+    <input id="audio-delay" v-model="audioDelay" type="number" min="0" />
+    <label for="audio-delay"> audio delay (ms) </label>
+  </div>
+  <div class="break"/>
+  <div>
     <button @click="play">play</button>
     <button @click="stop">stop</button>
     <button @click="addTrack">add track</button>
@@ -468,6 +481,10 @@ export default {
 
 .break {
   clear: both;
+}
+
+input[type=number] {
+  width: 5em;
 }
 
 button {

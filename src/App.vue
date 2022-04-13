@@ -2,6 +2,7 @@
 import { WebMidi } from "webmidi";
 import Track from "./components/Track.vue";
 import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
+import MosModal from "./components/MosModal.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, Monophone, setAudioDelay } from "./audio.js";
@@ -10,6 +11,7 @@ import { Keyboard } from "./keyboard.js";
 
 export default {
   components: {
+    MosModal,
     Track,
     DiatonicKeyboard,
   },
@@ -24,6 +26,7 @@ export default {
       activeMidiKeys: new Set(),
       onScreenNoteOffCallback: null,
       cancelCallbacks: [],
+      showMosModal: false,
       mosPattern: "LsLsLsL",
       l: 5,
       s: 2,
@@ -232,6 +235,9 @@ export default {
         return monzo;
     },
     noteOn(monzo, velocity) {
+      if (this.divisions === 0) {
+        return () => {};
+      }
       if (velocity === undefined) {
         velocity = this.velocity;
       }
@@ -427,6 +433,11 @@ export default {
       }
     },
     computerKeydown(event) {
+      if (event?.target instanceof HTMLInputElement && event?.target?.type !== "range") {
+        return;
+      } else if (event?.target instanceof HTMLSelectElement) {
+        return;
+      }
       resumeAudio();
       const [x, y, z] = event.coordinates;
       if (z !== 1) {
@@ -501,6 +512,10 @@ export default {
       this.activeColumn = null;
       this.inputMode = null;
       this.inputIndex = null;
+    },
+    choosePattern(pattern) {
+      this.mosPattern = pattern;
+      this.showMosModal = false;
     }
   },
   async mounted() {
@@ -530,6 +545,10 @@ export default {
 </script>
 
 <template>
+  <Teleport to="body">
+    <MosModal :show="showMosModal" @close="showMosModal = false" @selectPattern="choosePattern" />
+  </Teleport>
+
   <div>
     <input id="audio-delay" v-model="audioDelay" type="number" min="0" />
     <label for="audio-delay"> audio delay (ms) </label>
@@ -539,6 +558,15 @@ export default {
     <button @click="play">play</button>
     <button @click="stop">stop</button>
     <button @click="addTrack">add track</button>
+    <button @click="showMosModal = true">select MOS</button>
+  </div>
+  <div class="break" />
+  <div>
+    <input id="l" v-model="l" type="number">
+    <label for="l"> L </label>
+    <input id="s" v-model="s" type="number">
+    <label for="s"> s </label>
+    <span> = {{divisions}}edo</span>
   </div>
   <div class="break"/>
   <div>

@@ -1,5 +1,13 @@
 export function mod(n, m) {
-  return ((n % m) + m) % m;
+    return ((n % m) + m) % m;
+}
+
+export function gcd(a, b) {
+    if (b) {
+        return gcd(b, a % b);
+    } else {
+        return Math.abs(a);
+    }
 }
 
 export const NOTE_OFF = Symbol();

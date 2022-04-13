@@ -574,6 +574,7 @@ export default {
   <div>
     <DiatonicKeyboard @noteOn="onScreenNoteOn" :activeKeys="activeMiniKeys"/>
   </div>
+  <footer><a href="https://github.com/frostburn/lumi-tracker/issues/">Report bugs and suggest issues</a></footer>
 </template>
 
 <style>
@@ -585,6 +586,10 @@ export default {
   padding: 2rem;
 
   font-weight: normal;
+}
+
+footer {
+  margin-top: 60px;
 }
 
 .break {
@@ -602,7 +607,7 @@ button {
 a,
 .green {
   text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
+  color: hsla(160, 70%, 17%, 1);
   transition: 0.4s;
 }
 

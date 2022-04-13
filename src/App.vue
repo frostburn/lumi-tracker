@@ -79,6 +79,12 @@ export default {
       },
       immediate: true,
     },
+    midiInput(newValue, oldValue) {
+      if (oldValue !== null) {
+        oldValue.removeListener();
+      }
+      this.arm();
+    }
   },
   computed: {
     countL() {
@@ -262,6 +268,7 @@ export default {
       return monzo;
     },
     midiNoteOn(event) {
+      resumeAudio();
       const number = event.note.number;
       this.activeMidiKeys.add(number);
       const monzo = this.midiNumberToMonzo(number - MIDDLE_C);
@@ -283,7 +290,6 @@ export default {
       if (this.midiInput === null) {
         return;
       }
-      resumeAudio();
       this.midiInput.addListener("noteon", this.midiNoteOn);
       this.midiInput.addListener("noteoff", this.midiNoteOff);
 
@@ -536,11 +542,12 @@ export default {
   </div>
   <div class="break"/>
   <div>
+    <label>Accidentals: </label>
     <input type="radio" id="sharps" value="sharps" v-model="accidentals" />
-    <label for="sharps">Sharps </label>
+    <label for="sharps">Amps (sharp) </label>
 
     <input type="radio" id="flats" value="flats" v-model="accidentals" />
-    <label for="flats">Flats</label>
+    <label for="flats">Ats (flat)</label>
   </div>
   <div class="break"/>
   <div>
@@ -562,8 +569,6 @@ export default {
       <option disabled="disabled" selected="selected" value="">--Select device--</option>
       <option v-for="input of midiInputs" :value="input.id">{{ (input.manufacturer || "(Generic)") + ": " + input.name }}</option>
     </select>
-    <div class="break"/>
-    <button @click="arm">rec</button>
   </div>
   <div class="break"/>
   <div>

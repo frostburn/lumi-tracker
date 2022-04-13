@@ -7,7 +7,7 @@ export default {
             if (isNaN(this.velocity)) {
                 return "..";
             }
-            return this.velocity.toString(16).toUpperCase();
+            return this.velocity.toString(16).toUpperCase().padStart(2, "0");
         },
     },
 }
@@ -40,6 +40,7 @@ export default {
     }
 
     .note {
+        column-width: 3.1ch;
         color: #eeeeee;
     }
 

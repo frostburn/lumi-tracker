@@ -1,6 +1,5 @@
 <script>
 import { WebMidi } from "webmidi";
-
 import Track from "./components/Track.vue";
 import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, ratioToCents } from "./util.js";
@@ -32,11 +31,12 @@ export default {
       accidentals: "sharps",
       pitchBendMonzo: [1, 0],
       baseFrequency: REFERENCE_FREQUENCY,
-      beatsPerMinute: 120,
+      beatsPerMinute: 200,
       audioDelay: 5,
       playing: false,
       activeRow: null,
       activeColumn: null,
+      velocity: 0x80,
       inputMode: null,
       inputIndex: null,
       cancelRowCallback: null,
@@ -44,20 +44,21 @@ export default {
         {
           instrument: {
             monophonic: true,
-            waveform: 'theta2',
+            waveform: 'oddtheta3',
             frequencyGlide: 0.01,
             amplitudeGlide: 0.02,
           },
-          cells: [
-            {monzo: [0, 0], velocity: 0xFF},  // J3
-            {monzo: [1, 0], velocity: 0xFF},  // K3
-            {monzo: [1, 1], velocity: 0xFF},  // L3
-            {monzo: [2, 1], velocity: 0xFF},  // M3
-            {monzo: [2, 2], velocity: 0xFF},  // N3
-            {monzo: [3, 2], velocity: 0xFF},  // O3
-            {monzo: [3, 3], velocity: 0xFF},  // P3
-            {monzo: [4, 3], velocity: 0xFF},  // J4
-          ],
+          cells: Array(24).fill(null),
+          /* cells: [
+            {monzo: [0, 0], velocity: 0xFF},  // J4
+            {monzo: [1, 0], velocity: 0xFF},  // K4
+            {monzo: [1, 1], velocity: 0xFF},  // L4
+            {monzo: [2, 1], velocity: 0xFF},  // M4
+            {monzo: [2, 2], velocity: 0xFF},  // N4
+            {monzo: [3, 2], velocity: 0xFF},  // O4
+            {monzo: [3, 3], velocity: 0xFF},  // P4
+            {monzo: [4, 3], velocity: 0xFF},  // J5
+          ],*/
         },
         {
           instrument: {
@@ -66,16 +67,7 @@ export default {
             frequencyGlide: 0.05,
             amplitudeGlide: 0.05,
           },
-          cells: [
-            null,
-            {monzo: [-4, -3], velocity: 0x80},
-            null,
-            null,
-            {monzo: [0, 0], velocity: 0x80},
-            NOTE_OFF,
-            {monzo: [-4, -3], velocity: 0x80},
-            null,
-          ],
+          cells: Array(24).fill(null),
         },
       ]
     }
@@ -113,6 +105,9 @@ export default {
     },
     equaveCents() {
       return ratioToCents(this.equave);
+    },
+    columnHeight() {
+      return this.tracks[0].cells.length;
     },
     pitchBendDepth() {
       return (this.l*this.pitchBendMonzo[0] + this.s*this.pitchBendMonzo[1]) / this.divisions * this.equaveCents;
@@ -195,10 +190,12 @@ export default {
       const ctx = getAudioContext();
       const startTime = ctx.currentTime;
       function activateNextRow() {
-        if (!this.playing || this.activeRow >= this.tracks[0].cells.length) {
+        if (!this.playing) {
           return;
         }
-        this.activeRow++;
+        if (!this.incrementRow()) {
+          return;
+        }
         const [fire, cancel] = scheduleAction(startTime + this.beatDuration * (this.activeRow + 1), activateNextRow.bind(this));
         this.cancelRowCallback = cancel;
       }
@@ -229,8 +226,19 @@ export default {
         return monzo;
     },
     noteOn(monzo, velocity) {
-      const frequency = this.baseFrequency * Math.exp(this.natsL * monzo[0] + this.natsS * monzo[1]);
-      return this.instrument.noteOn(frequency, velocity);
+      if (velocity === undefined) {
+        velocity = this.velocity;
+      }
+      if (this.inputMode === null) {
+        const frequency = this.baseFrequency * Math.exp(this.natsL * monzo[0] + this.natsS * monzo[1]);
+        return this.instrument.noteOn(frequency, velocity / 0xFF);
+      } else if (this.inputMode === "note" && this.activeRow !== null) {
+        if (this.activeRow >= 0 && this.activeRow < this.columnHeight) {
+          this.tracks[this.activeColumn].cells[this.activeRow] = { monzo, velocity };
+          this.incrementRow();
+        }
+      }
+      return () => {};
     },
     velocityCurve(velocity) {
       return Math.sqrt(velocity) * 0.9 + 0.1;
@@ -257,7 +265,7 @@ export default {
       const number = event.note.number;
       this.activeMidiKeys.add(number);
       const monzo = this.midiNumberToMonzo(number - MIDDLE_C);
-      const noteOff = this.noteOn(monzo, this.velocityCurve(event.note.attack));
+      const noteOff = this.noteOn(monzo, event.rawVelocity*2);
       if (this.midiNoteOffCallbacks.has(number)) {
         this.midiNoteOffCallbacks.get(number)();
       }
@@ -296,7 +304,7 @@ export default {
     onScreenNoteOn(number) {
       resumeAudio();
       const monzo = this.midiNumberToMonzo(number);
-      this.onScreenNoteOffCallback = this.noteOn(monzo, 0.9);
+      this.onScreenNoteOffCallback = this.noteOn(monzo);
     },
     onMouseUp() {
       if (this.onScreenNoteOffCallback !== null) {
@@ -304,9 +312,112 @@ export default {
         this.onScreenNoteOffCallback = null;
       }
     },
+    incrementColumn() {
+      if (this.activeColumn >= this.tracks.length - 1) {
+        return false;
+      }
+      this.activeColumn++;
+      return true;
+    },
+    decrementColumn() {
+      if (this.activeColumn <= 0) {
+        return false;
+      }
+      this.activeColumn--;
+      return true;
+    },
+    incrementRow(delta=1) {
+      if (delta < 0) {
+        if (this.activeRow <= 0) {
+          return false;
+        }
+        this.activeRow += delta;
+        if (this.activeRow < 0) {
+          this.activeRow = 0;
+        }
+      } else if (delta > 0) {
+        if (this.activeRow >= this.columnHeight - 1) {
+          return false;
+        }
+        this.activeRow += delta;
+        if (this.activeRow >= this.columnHeight) {
+          this.activeRow = this.columnHeight - 1;
+        }
+      }
+      return true;
+    },
     windowKeydown(event) {
       if (event.code === "Backquote") {
         this.computerKeyboard.deactivate();
+      }
+      if (this.activeRow >= 0 && this.activeRow < this.columnHeight) {
+        if (this.inputMode === "note") {
+          let result;
+          let delta = 0;
+          if (event.code === "Backquote") {
+            result = NOTE_OFF;
+            delta = 1;
+          } else if (event.key === "Delete") {
+            result = null;
+          } else if (event.key === "Backspace") {
+            result = null;
+            delta = -1;
+          }
+          if (result !== undefined) {
+            this.tracks[this.activeColumn].cells[this.activeRow] = result;
+            this.incrementRow(delta);
+          }
+        }
+        if (this.inputMode === "velocity") {
+          if ("0123456789ABCDEFabcdef".includes(event.key)) {
+            const cell = this.tracks[this.activeColumn].cells[this.activeRow];
+            if (cell?.velocity === undefined) {
+              return;
+            }
+            const keyValue = parseInt(event.key, 16);
+            let value = cell.velocity;
+            if (this.inputIndex === 1) {
+              value = (value & 0xF0) | keyValue;
+            } else if (this.inputIndex === 0) {
+              value = (value & 0xF) | (keyValue << 4);
+            }
+            cell.velocity = value;
+            this.incrementRow();
+          }
+        }
+        if (event.key === "ArrowDown") {
+          this.incrementRow();
+        } else if (event.key === "ArrowUp") {
+          this.incrementRow(-1);
+        }
+        if (event.key === "ArrowRight") {
+          if (this.inputMode === "note") {
+            this.inputMode = "velocity";
+            this.inputIndex = 0;
+          } else if (this.inputMode === "velocity") {
+            this.inputIndex++;
+            if (this.inputIndex > 1) {
+              this.inputIndex = 1;
+              if (this.incrementColumn()) {
+                this.inputMode = "note";
+              }
+            }
+          }
+        }
+        if (event.key === "ArrowLeft") {
+          if (this.inputMode === "note") {
+            if (this.decrementColumn()) {
+              this.inputMode = "velocity";
+              this.inputIndex = 1;
+            }
+          } else if (this.inputMode === "velocity") {
+            this.inputIndex--;
+            if (this.inputIndex < 0) {
+              this.inputIndex = 0;
+              this.inputMode = "note";
+            }
+          }
+        }
       }
     },
     computerKeydown(event) {
@@ -348,33 +459,25 @@ export default {
         monzo = this.scaleStepToMonzo(x + 1);
       }
       if (monzo !== undefined) {
-        const noteOff = this.noteOn(monzo, 0.9);
+        const noteOff = this.noteOn(monzo);
         this.computerNoteOffCallbacks.set(event.coordinates, noteOff);
       }
     },
     computerKeyup(event) {
       if (this.computerNoteOffCallbacks.has(event.coordinates)) {
         this.computerNoteOffCallbacks.get(event.coordinates)();
+        this.computerNoteOffCallbacks.delete(event.coordinates);
       }
     },
     addTrack() {
       this.tracks.push({
         instrument: {
           monophonic: true,
-          waveform: 'oddtheta4',
+          waveform: 'theta4',
           frequencyGlide: 0.01,
           amplitudeGlide: 0.02,
         },
-        cells: [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          {monzo: [8, 6], velocity: 0x80},
-        ],
+        cells: Array(24).fill(null),
       });
     },
     selectNote(columnIndex, rowIndex) {
@@ -491,15 +594,6 @@ button {
   float: left;
 }
 
-header {
-  line-height: 1.5;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
 a,
 .green {
   text-decoration: none;
@@ -521,25 +615,7 @@ a,
   }
 
   #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
     padding: 0 2rem;
-  }
-
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
   }
 }
 </style>

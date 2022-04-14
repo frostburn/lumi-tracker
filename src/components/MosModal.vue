@@ -1,5 +1,6 @@
 <script>
 import { mosPatterns } from "../notation.js";
+import { tamnamsName, MOS_PATTERN_NAMES } from "../xenwiki.js";
 
 export default {
   props: {
@@ -10,11 +11,20 @@ export default {
     return {
       countL: null,
       countS: null,
+      tamnamsName: "",
     };
   },
   computed: {
     patterns() {
-      return mosPatterns(this.countL, this.countS);
+      const result = [];
+      mosPatterns(this.countL, this.countS).forEach(pattern => {
+        let name = "";
+        if (pattern in MOS_PATTERN_NAMES) {
+          name = MOS_PATTERN_NAMES[pattern];
+        }
+        result.push([pattern, name]);
+      });
+      return result;
     }
   },
   methods: {
@@ -27,6 +37,10 @@ export default {
       this.countL = null;
       this.countS = null;
       this.$emit("selectPattern", pattern);
+    },
+    updateTamnams(countL, countS) {
+      const name = tamnamsName(`${countL}L ${countS}s`);
+      this.tamnamsName = name || "";
     },
   },
 }
@@ -44,19 +58,21 @@ export default {
           <div class="modal-body">
             <template v-if="countL === null">
               <span class="pyramid-row" v-for="n of [5, 6, 7, 8, 9, 10, 11]">
-                <button v-for="l of n-1" @click="countL=l; countS=(n-l)">
+                <button v-for="l of n-1" @click="countL=l; countS=(n-l); updateTamnams(l, n-l)" @mouseenter="updateTamnams(l, n-l)" @focus="updateTamnams(l, n-l)">
                   {{l}}L {{n-l}}s
                 </button>
               </span>
             </template>
             <template v-else>
-              <template v-for="pattern of patterns">
-                <button class="pattern" @click="selectPattern(pattern)">{{ pattern }}</button>
-              </template>
+              <div v-for="[pattern, mode] of patterns">
+                <button @click="selectPattern(pattern)">{{ pattern }}</button>
+                <span>{{ " " + mode }}</span>
+              </div>
             </template>
           </div>
 
           <div class="modal-footer">
+            <span class="name">{{ tamnamsName }}</span>
             <button
               class="modal-default-button"
               @click="close"
@@ -114,8 +130,8 @@ export default {
   margin: 0 auto;
 }
 
-.pattern {
-  display: block;
+.name::before{
+   content: "\200B";
 }
 
 /*

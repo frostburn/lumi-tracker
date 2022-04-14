@@ -27,9 +27,9 @@ export default {
       onScreenNoteOffCallback: null,
       cancelCallbacks: [],
       showMosModal: false,
-      mosPattern: "LsLsLsL",
-      l: 5,
-      s: 2,
+      mosPattern: "LLsLLLs",
+      l: 2,
+      s: 1,
       equave: 2,
       accidentals: "sharps",
       pitchBendMonzo: [1, 0],
@@ -129,6 +129,18 @@ export default {
         return mosMonzoToJ(this.mos, monzo)
       }
       return notate;
+    },
+    sharpsStr() {
+      if (this.mos === "5L 2s") {
+        return "Sharps";
+      }
+      return "Amps (sharp)";
+    },
+    flatsStr() {
+      if (this.mos === "5L 2s") {
+        return "Flats";
+      }
+      return "Ats (flat)";
     },
     cellsWithNotes() {
       const result = [];
@@ -552,13 +564,8 @@ export default {
   <div>
     <input id="audio-delay" v-model="audioDelay" type="number" min="0" />
     <label for="audio-delay"> audio delay (ms) </label>
-  </div>
-  <div class="break"/>
-  <div>
-    <button @click="play">play</button>
-    <button @click="stop">stop</button>
-    <button @click="addTrack">add track</button>
-    <button @click="showMosModal = true">select MOS</button>
+    <button id="select-mos" @click="showMosModal = true">select MOS</button>
+    <label for="select-mos"> = {{ mosPattern }}</label>
   </div>
   <div class="break" />
   <div>
@@ -566,16 +573,21 @@ export default {
     <label for="l"> L </label>
     <input id="s" v-model="s" type="number">
     <label for="s"> s </label>
-    <span> = {{divisions}}edo</span>
+    <label for="equave"> = {{divisions}}ed</label>
+    <input id="equave" v-model="equave" type="number" step="0.01">
   </div>
   <div class="break"/>
   <div>
+    <button @click="play">play</button>
+    <button @click="stop">stop</button>
+    <button @click="addTrack">add track</button>
+
     <label>Accidentals: </label>
     <input type="radio" id="sharps" value="sharps" v-model="accidentals" />
-    <label for="sharps">Amps (sharp) </label>
+    <label for="sharps">{{ sharpsStr }} </label>
 
     <input type="radio" id="flats" value="flats" v-model="accidentals" />
-    <label for="flats">Ats (flat)</label>
+    <label for="flats">{{ flatsStr }}</label>
   </div>
   <div class="break"/>
   <div>
@@ -626,10 +638,6 @@ footer {
 
 input[type=number] {
   width: 5em;
-}
-
-button {
-  float: left;
 }
 
 a,

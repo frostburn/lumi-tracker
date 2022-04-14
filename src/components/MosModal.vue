@@ -16,7 +16,19 @@ export default {
     patterns() {
       return mosPatterns(this.countL, this.countS);
     }
-  }
+  },
+  methods: {
+    close() {
+      this.countL = null;
+      this.countS = null;
+      this.$emit("close");
+    },
+    selectPattern(pattern) {
+      this.countL = null;
+      this.countS = null;
+      this.$emit("selectPattern", pattern);
+    },
+  },
 }
 </script>
 
@@ -39,8 +51,7 @@ export default {
             </template>
             <template v-else>
               <template v-for="pattern of patterns">
-                <button class="pattern" @click="$emit('selectPattern', pattern)">{{ pattern }}</button>
-                <br>
+                <button class="pattern" @click="selectPattern(pattern)">{{ pattern }}</button>
               </template>
             </template>
           </div>
@@ -48,7 +59,7 @@ export default {
           <div class="modal-footer">
             <button
               class="modal-default-button"
-              @click="$emit('close')"
+              @click="close"
             >Cancel</button>
           </div>
         </div>

@@ -26,3 +26,18 @@ const NATS_TO_CENTS = 1200 / Math.LN2;
 export function ratioToCents(ratio) {
     return Math.log(ratio) * NATS_TO_CENTS;
 }
+
+export function toSignedString(number, saturated=true) {
+    if (saturated) {
+        if (number > 35) {
+            return "🠵";
+        }
+        if (number < -26) {
+            return "🠷";
+        }
+    }
+    if (number >= 0) {
+        return number.toString(36).toUpperCase();
+    }
+    return (9-number).toString(36).toLowerCase();
+}

@@ -1,4 +1,4 @@
-import { mod, gcd, REFERENCE_OCTAVE } from "./util.js";
+import { mod, gcd, REFERENCE_OCTAVE, toSignedString } from "./util.js";
 
 const MOS_PATTERNS = {
     '1L 4s': 'ssLss',
@@ -81,7 +81,7 @@ export function mosPatterns(countL, countS) {
     return result;
 }
 
-export function mosMonzoToJ(mos, monzo) {
+export function mosMonzoToJ(mos, monzo, saturated=true) {
     const degrees = DEGREES_BY_MOS[mos];
     const countL = parseInt(mos.split(" ")[0].slice(0, -1));
     const countS = parseInt(mos.split(" ")[1].slice(0, -1));
@@ -100,12 +100,22 @@ export function mosMonzoToJ(mos, monzo) {
     const degree = degrees[coordL + coordS];
     let amps = coordL - degree[0];
     let accidental = '';
+    if (saturated) {
+        if (amps >= 3) {
+            accidental = "🠵";
+            amps = 0;
+        }
+        if (amps <= -3) {
+            accidental = "🠷";
+            amps = 0;
+        }
+    }
     while (amps >= 2) {
         accidental += '§';  // Non-standard
         amps -= 2;
     }
     while (amps > 0) {
-        accidental += '&';
+        accidental = '&' + accidental;
         amps -= 1;
     }
     while (amps <= -2) {
@@ -113,7 +123,7 @@ export function mosMonzoToJ(mos, monzo) {
         amps += 2;
     }
     while (amps < 0) {
-        accidental += '@';
+        accidental = '@' + accidental;
         amps += 1;
     }
     if (accidental === "") {
@@ -122,7 +132,14 @@ export function mosMonzoToJ(mos, monzo) {
 
     const letter = String.fromCharCode('J'.charCodeAt(0) + coordL + coordS);
 
-    return letter + accidental + octaves.toString(16);
+    let octaveStr;
+    if (saturated) {
+        octaveStr = toSignedString(octaves);
+    } else {
+        octaveStr = octaves.toString(16);
+    }
+
+    return letter + accidental + octaveStr;
 }
 
 const FIFTHS_CHAIN = "FCGDAEB";
@@ -132,7 +149,7 @@ const SHARP_OCTAVES = -4;
 
 const OCTAVE_CORRECTIONS = [-1, 0, 0, 1, 1, 2, 2];
 
-export function mosMonzoToDiatonic(monzo) {
+export function mosMonzoToDiatonic(monzo, saturated=true) {
     const [coordL, coordS] = monzo;
     const fifths = 2*coordL - 5*coordS;
     let octaves = 3*coordS - coordL + REFERENCE_OCTAVE;
@@ -143,6 +160,17 @@ export function mosMonzoToDiatonic(monzo) {
 
     const letter = FIFTHS_CHAIN[mod(index, FIFTHS_CHAIN.length)];
     let accidental = "";
+
+    if (saturated) {
+        if (index >= 3*FIFTHS_CHAIN.length) {
+            accidental = "🠵";
+            index = 0;
+        }
+        if (index <= -2*FIFTHS_CHAIN.length) {
+            accidental = "🠷";
+            index = 0;
+        }
+    }
 
     while (index < -FIFTHS_CHAIN.length) {
         accidental += "𝄫";
@@ -167,7 +195,15 @@ export function mosMonzoToDiatonic(monzo) {
     if (accidental === "") {
         accidental = "♮";
     }
-    return letter + accidental + octaves.toString(16);
+
+    let octaveStr;
+    if (saturated) {
+        octaveStr = toSignedString(octaves);
+    } else {
+        octaveStr = octaves.toString(16);
+    }
+
+    return letter + accidental + octaveStr;
 }
 
 const SMI_CHAIN = "KMOJLNP"
@@ -194,7 +230,7 @@ export function mosMonzoToSmitonic(monzo) {
         octaves += 2*SMI_AMP_OCTAVES;
     }
     while (index < 0) {
-        accidental += "&";
+        accidental = "&" + accidental;
         index += SMI_CHAIN.length;
         octaves += SMI_AMP_OCTAVES;
     }
@@ -204,7 +240,7 @@ export function mosMonzoToSmitonic(monzo) {
         octaves -= 2*SMI_AMP_OCTAVES;
     }
     while (index >= SMI_CHAIN.length) {
-        accidental += "@";
+        accidental = "@" + accidental;
         index -= SMI_CHAIN.length;
         octaves -= SMI_AMP_OCTAVES;
     }

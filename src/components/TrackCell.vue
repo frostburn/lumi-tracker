@@ -10,12 +10,18 @@ export default {
             return this.velocity.toString(16).toUpperCase().padStart(2, "0");
         },
     },
+    methods: {
+        scrollIntoView() {
+            this.$refs.note.scrollIntoView();
+        },
+    },
 }
 </script>
 
 <template>
     <tr :class="{active}">
         <td
+            ref="note"
             class="note"
             :class="{ focused: focused && inputMode === 'note' }"
             @click.stop="$emit('noteClick')"

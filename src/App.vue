@@ -231,6 +231,8 @@ export default {
         if (!this.incrementRow()) {
           return;
         }
+        const trackComponent = this.$refs.tracks[this.activeColumn || 0];
+        trackComponent.scrollIntoView();
         const [fire, cancel] = scheduleAction(startTime + this.beatDuration * (this.activeRow + 1), activateNextRow.bind(this));
         this.cancelRowCallback = cancel;
       }
@@ -613,6 +615,7 @@ export default {
     <Track
       v-for="(cells, index) of cellsWithNotes" :cells="cells"
       :key="index"
+      ref="tracks"
       :active="index === activeColumn"
       :activeRow="activeRow"
       :inputMode="inputMode"

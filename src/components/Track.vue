@@ -7,6 +7,11 @@ export default {
     },
     props: ["cells", "active", "activeRow", "inputMode", "inputIndex"],
     emits: ["noteClick", "velocityClick"],
+    methods: {
+        scrollIntoView() {
+            this.$refs.cells[this.activeRow || 0].scrollIntoView();
+        },
+    },
 }
 </script>
 
@@ -14,6 +19,7 @@ export default {
     <table>
         <TrackCell
             v-for="(cell, index) of cells" v-bind=cell
+            ref="cells"
             :key="index"
             :active="index === activeRow"
             :focused="active && index === activeRow"

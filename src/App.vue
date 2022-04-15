@@ -3,6 +3,7 @@ import { WebMidi } from "webmidi";
 import TrackRowLabels from "./components/TrackRowLabels.vue";
 import Track from "./components/Track.vue";
 import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
+import ComputerKeyboard from "./components/ComputerKeyboard.vue";
 import MosModal from "./components/MosModal.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
@@ -18,12 +19,14 @@ export default {
     TrackRowLabels,
     Track,
     DiatonicKeyboard,
+    ComputerKeyboard,
   },
   data() {
     return {
       instrument: new Monophone("oddtheta3"),
       computerKeyboard: null,
       computerNoteOffCallbacks: new Map(),
+      activeComputerKeys: new Set(),
       midiNoteOffCallbacks: new Map(),
       midiInputs: [],
       midiInput: null,
@@ -185,7 +188,7 @@ export default {
         result.add((key + 12) % 24);
       }
       return result;
-    }
+    },
   },
   methods: {
     cellsToFrequencies(cells) {
@@ -348,6 +351,9 @@ export default {
       const monzo = this.midiNumberToMonzo(number);
       this.onScreenNoteOffCallback = this.noteOn(monzo);
     },
+    onScreenComputerNoteOn(code) {
+      /* TODO */
+    },
     onMouseUp() {
       if (this.onScreenNoteOffCallback !== null) {
         this.onScreenNoteOffCallback();
@@ -391,6 +397,10 @@ export default {
     windowKeydown(event) {
       if (event.code === "Backquote") {
         this.computerKeyboard.deactivate();
+        this.activeComputerKeys.add(event.code);
+      }
+      if (["ShiftLeft", "ShiftRight"].includes(event.code)) {
+        this.activeComputerKeys.add(event.code);
       }
       if (this.activeRow >= 0 && this.activeRow < this.columnHeight) {
         if (this.inputMode === "note") {
@@ -462,6 +472,11 @@ export default {
         }
       }
     },
+    windowKeyup(event) {
+      if (["Backquote", "ShiftLeft", "ShiftRight"].includes(event.code)) {
+        this.activeComputerKeys.delete(event.code);
+      }
+    },
     computerKeydown(event) {
       if (event?.target instanceof HTMLInputElement && event?.target?.type !== "range") {
         return;
@@ -506,6 +521,7 @@ export default {
         monzo = this.scaleStepToMonzo(x + 1);
       }
       if (monzo !== undefined) {
+        this.activeComputerKeys.add(event.code);
         const noteOff = this.noteOn(monzo);
         this.computerNoteOffCallbacks.set(event.coordinates, noteOff);
       }
@@ -515,6 +531,7 @@ export default {
         this.computerNoteOffCallbacks.get(event.coordinates)();
         this.computerNoteOffCallbacks.delete(event.coordinates);
       }
+      this.activeComputerKeys.delete(event.code);
     },
     addTrack() {
       this.tracks.push({
@@ -559,6 +576,7 @@ export default {
     this.computerKeyboard.addEventListener("keydown", this.computerKeydown);
     this.computerKeyboard.addEventListener("keyup", this.computerKeyup);
     window.addEventListener("keydown", this.windowKeydown);
+    window.addEventListener("keyup", this.windowKeyup);
     if (navigator.requestMIDIAccess !== undefined) {
       await WebMidi.enable();
       this.midiInputs = WebMidi.inputs;
@@ -571,6 +589,8 @@ export default {
     this.instrument.dispose();
     window.removeEventListener("mouseup", this.onMouseUp);
     window.removeEventListener("click", this.selectNothing);
+    window.removeEventListener("keydown", this.windowKeydown);
+    window.removeEventListener("keyup", this.windowKeyup);
     if (this.midiInput !== null) {
       this.midiInput.removeListener();
     }
@@ -628,17 +648,24 @@ export default {
     />
   </div>
   <div class="break"/>
-  <div>
-    <h1>MIDI Input</h1>
-    <select @change="selectMidiInput">
-      <option disabled="disabled" selected="selected" value="">--Select device--</option>
-      <option v-for="input of midiInputs" :value="input.id">{{ (input.manufacturer || "(Generic)") + ": " + input.name }}</option>
-    </select>
+  <div class="input-container">
+    <div class="input-column">
+      <h1>MIDI Input</h1>
+      <select @change="selectMidiInput">
+        <option disabled="disabled" selected="selected" value="">--Select device--</option>
+        <option v-for="input of midiInputs" :value="input.id">{{ (input.manufacturer || "(Generic)") + ": " + input.name }}</option>
+      </select>
+      <div class="break"/>
+      <div>
+        <DiatonicKeyboard @noteOn="onScreenNoteOn" :activeKeys="activeMiniKeys"/>
+      </div>
+    </div>
+    <div class="input-column">
+      <h1>Computer Keyboard Input</h1>
+      <ComputerKeyboard @noteOn="onScreenComputerNoteOn" :activeKeys="activeComputerKeys" />
+    </div>
   </div>
   <div class="break"/>
-  <div>
-    <DiatonicKeyboard @noteOn="onScreenNoteOn" :activeKeys="activeMiniKeys"/>
-  </div>
   <footer><a href="https://github.com/frostburn/lumi-tracker/issues/">Report bugs and suggest issues</a></footer>
 </template>
 
@@ -660,12 +687,17 @@ export default {
   overflow: scroll;
 }
 
+.input-column {
+  float: left;
+  margin-right: 20px;
+}
+
 h1 {
   font-size: 1.2em;
 }
 
 footer {
-  margin-top: 60px;
+  margin-top: 10px;
 }
 
 .break {

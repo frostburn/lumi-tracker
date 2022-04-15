@@ -1,10 +1,10 @@
 const ORIGIN_LAYER_0 = 0;
-const CODES_LAYER_0 = [
+export const CODES_LAYER_0 = [
     ['Escape', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12'],
 ];
 
 const ORIGIN_LAYER_1 = -1;
-const CODES_LAYER_1 = [
+export const CODES_LAYER_1 = [
     ['Backquote', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal'],
     [null, 'KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP', 'BracketLeft', 'BracketRight'],
     [null, 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon', 'Quote', 'Backslash'],
@@ -12,13 +12,13 @@ const CODES_LAYER_1 = [
 ];
 
 const ORIGIN_LAYER_2 = 0;
-const CODES_LAYER_2 = [
+export const CODES_LAYER_2 = [
     ['Insert', 'Home', 'PageUp'],
     ['Delete', 'End', 'PageDown'],
 ];
 
 const ORIGIN_LAYER_3 = 0;
-const CODES_LAYER_3 = [
+export const CODES_LAYER_3 = [
     ['NumLock', 'NumpadDivide', 'NumpadMultiply', 'NumpadSubtract'],
     ['Numpad7', 'Numpad8', 'Numpad9', 'NumpadAdd'],
     ['Numpad4', 'Numpad5', 'Numpad6'],

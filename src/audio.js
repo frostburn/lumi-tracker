@@ -13,7 +13,17 @@ const DEFAULT_WAVEFORMS = ["sine", "square", "sawtooth", "triangle"];
 const PERIODIC_WAVES = {};
 
 export function availableWaveforms() {
-    return Object.keys(PERIODIC_WAVES).concat(DEFAULT_WAVEFORMS);
+    const result = Object.keys(PERIODIC_WAVES).concat(DEFAULT_WAVEFORMS);
+    result.sort();
+    return result;
+}
+
+export function setWaveform(oscillator, waveform) {
+    if (DEFAULT_WAVEFORMS.includes(waveform)) {
+        oscillator.type = waveform;
+    } else {
+        oscillator.setPeriodicWave(PERIODIC_WAVES[waveform]);
+    }
 }
 
 export function getAudioContext() {
@@ -53,11 +63,7 @@ function obtainOscillator(waveform="sine") {
         oscillator = ctx.createOscillator();
         oscillator.start(ctx.currentTime);
     }
-    if (DEFAULT_WAVEFORMS.includes(waveform)) {
-        oscillator.type = waveform;
-    } else {
-        oscillator.setPeriodicWave(PERIODIC_WAVES[waveform]);
-    }
+    setWaveform(oscillator, waveform);
     return oscillator;
 }
 

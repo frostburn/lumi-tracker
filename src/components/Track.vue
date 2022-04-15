@@ -9,6 +9,7 @@ export default {
     emits: ["noteClick", "velocityClick"],
     methods: {
         scrollIntoView() {
+            // TODO: Fix initial sync issues when pressing play
             this.$refs.cells[this.activeRow || 0].scrollIntoView();
         },
     },

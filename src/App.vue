@@ -5,9 +5,11 @@ import Track from "./components/Track.vue";
 import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
 import ComputerKeyboard from "./components/ComputerKeyboard.vue";
 import MosModal from "./components/MosModal.vue";
+import InstrumentModal from "./components/InstrumentModal.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
-import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, Monophone, setAudioDelay } from "./audio.js";
+import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, setAudioDelay } from "./audio.js";
+import { Monophone, availableWaveforms, setWaveform } from "./audio.js";
 import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
 
@@ -16,6 +18,7 @@ const COLUMN_HEIGHT = 64;
 export default {
   components: {
     MosModal,
+    InstrumentModal,
     TrackRowLabels,
     Track,
     DiatonicKeyboard,
@@ -23,7 +26,8 @@ export default {
   },
   data() {
     return {
-      instrument: new Monophone("oddtheta3"),
+      instrument: new Monophone("oddtheta3", 0.01, 0.02),
+      activeInstrument: null,
       computerKeyboard: null,
       computerNoteOffCallbacks: new Map(),
       activeComputerKeys: new Set(),
@@ -34,6 +38,7 @@ export default {
       onScreenNoteOffCallback: null,
       cancelCallbacks: [],
       showMosModal: false,
+      showInstrumentModal: false,
       mosPattern: "LLsLLLs",
       l: 2,
       s: 1,
@@ -57,30 +62,20 @@ export default {
           instrument: {
             monophonic: true,
             waveform: 'oddtheta3',
-            frequencyGlide: 0.01,
-            amplitudeGlide: 0.02,
+            frequencyGlide: 10,
+            amplitudeGlide: 20,
           },
           patterns: [
             Array(COLUMN_HEIGHT).fill(null),
             Array(COLUMN_HEIGHT).fill(null),
           ],
-          /* cells: [
-            {monzo: [0, 0], velocity: 0xFF},  // J4
-            {monzo: [1, 0], velocity: 0xFF},  // K4
-            {monzo: [1, 1], velocity: 0xFF},  // L4
-            {monzo: [2, 1], velocity: 0xFF},  // M4
-            {monzo: [2, 2], velocity: 0xFF},  // N4
-            {monzo: [3, 2], velocity: 0xFF},  // O4
-            {monzo: [3, 3], velocity: 0xFF},  // P4
-            {monzo: [4, 3], velocity: 0xFF},  // J5
-          ],*/
         },
         {
           instrument: {
             monophonic: true,
             waveform: 'triangle',
-            frequencyGlide: 0.05,
-            amplitudeGlide: 0.05,
+            frequencyGlide: 50,
+            amplitudeGlide: 50,
           },
           patterns: [
             Array(COLUMN_HEIGHT).fill(null),
@@ -102,7 +97,15 @@ export default {
         oldValue.removeListener();
       }
       this.arm();
-    }
+    },
+    activeInstrument: {
+      handler(newValue) {
+        setWaveform(this.instrument.oscillator, this.activeInstrument.waveform);
+        this.instrument.frequencyGlide = this.activeInstrument.frequencyGlide / 1000;
+        this.instrument.amplitudeGlide = this.activeInstrument.amplitudeGlide / 1000;
+      },
+      deep: true,
+    },
   },
   computed: {
     countL() {
@@ -189,6 +192,9 @@ export default {
       }
       return result;
     },
+    waveforms() {
+      return availableWaveforms();
+    },
   },
   methods: {
     cellsToFrequencies(cells) {
@@ -223,7 +229,12 @@ export default {
       suspendAudio();
       this.tracks.forEach((track, i) => {
         const cells = this.cellsToFrequencies(track.patterns[this.frames[this.activeFrame][i]]);
-        this.cancelCallbacks.push(playFrequencies(cells, track.instrument, this.beatDuration));
+        const instrument = {
+          waveform: track.instrument.waveform,
+          frequencyGlide: track.instrument.frequencyGlide / 1000,
+          amplitudeGlide: track.instrument.amplitudeGlide / 1000,
+        };
+        this.cancelCallbacks.push(playFrequencies(cells, instrument, this.beatDuration));
       });
       this.playing = true;
 
@@ -538,8 +549,8 @@ export default {
         instrument: {
           monophonic: true,
           waveform: 'theta4',
-          frequencyGlide: 0.01,
-          amplitudeGlide: 0.02,
+          frequencyGlide: 10,
+          amplitudeGlide: 20,
         },
         patterns: [
           Array(this.tracks[0].patterns[0].length).fill(null),
@@ -567,9 +578,14 @@ export default {
     choosePattern(pattern) {
       this.mosPattern = pattern;
       this.showMosModal = false;
+    },
+    openInstrumentModal(instrument) {
+      this.activeInstrument = instrument;
+      this.showInstrumentModal = true;
     }
   },
   async mounted() {
+    this.activeInstrument = this.tracks[0].instrument;
     window.addEventListener("mouseup", this.onMouseUp);
     window.addEventListener("click", this.selectNothing);
     this.computerKeyboard = new Keyboard();
@@ -603,6 +619,10 @@ export default {
     <MosModal :show="showMosModal" @close="showMosModal = false" @selectPattern="choosePattern" />
   </Teleport>
 
+  <Teleport to="body">
+    <InstrumentModal :show="showInstrumentModal" @close="showInstrumentModal = false" :instrument="activeInstrument" />
+  </Teleport>
+
   <div>
     <input id="audio-delay" v-model="audioDelay" type="number" min="0" />
     <label for="audio-delay"> audio delay (ms) </label>
@@ -633,6 +653,16 @@ export default {
     <label for="flats">{{ flatsStr }}</label>
   </div>
   <div class="break"/>
+  <table>
+    <tr>
+      <th v-for="track of tracks">
+        <select v-model="track.instrument.waveform" @focus="activeInstrument = track.instrument">
+          <option v-for="waveform of waveforms">{{ waveform }}</option>
+        </select>
+        <span class="instrument-config" @click="openInstrumentModal(track.instrument)">⚙</span>
+      </th>
+    </tr>
+  </table>
   <div class="track-container">
     <TrackRowLabels :numRows="columnHeight" @click="(i) => activeRow = i"/>
     <Track
@@ -690,6 +720,10 @@ export default {
 .input-column {
   float: left;
   margin-right: 20px;
+}
+
+.instrument-config {
+  cursor: pointer;
 }
 
 h1 {

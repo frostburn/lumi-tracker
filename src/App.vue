@@ -224,6 +224,13 @@ export default {
       this.playing = false;
       this.activeRow = null;
     },
+    scrollIntoView() {
+      // TODO: Scroll into view on note input
+      this.$nextTick().then(() => {
+        const trackComponent = this.$refs.tracks[this.activeColumn || 0];
+        trackComponent.scrollIntoView();
+      });
+    },
     play() {
       this.cancelPlay();
       suspendAudio();
@@ -247,8 +254,7 @@ export default {
         if (!this.incrementRow()) {
           return;
         }
-        const trackComponent = this.$refs.tracks[this.activeColumn || 0];
-        trackComponent.scrollIntoView();
+        this.scrollIntoView();
         const [fire, cancel] = scheduleAction(startTime + this.beatDuration * (this.activeRow + 1), activateNextRow.bind(this));
         this.cancelRowCallback = cancel;
       }
@@ -422,6 +428,7 @@ export default {
             delta = 1;
           } else if (event.key === "Delete") {
             result = null;
+            delta = 1;
           } else if (event.key === "Backspace") {
             result = null;
             delta = -1;
@@ -481,6 +488,10 @@ export default {
             }
           }
         }
+        if (["ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft"].includes(event.key)) {
+          event.preventDefault();
+          this.scrollIntoView();
+        }
       }
     },
     windowKeyup(event) {
@@ -492,6 +503,9 @@ export default {
       if (event?.target instanceof HTMLInputElement && event?.target?.type !== "range") {
         return;
       } else if (event?.target instanceof HTMLSelectElement) {
+        return;
+      }
+      if (event.code === "Backquote") {
         return;
       }
       resumeAudio();

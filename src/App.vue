@@ -9,6 +9,8 @@ import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAc
 import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
 
+const COLUMN_HEIGHT = 64;
+
 export default {
   components: {
     MosModal,
@@ -54,8 +56,8 @@ export default {
             amplitudeGlide: 0.02,
           },
           patterns: [
-            Array(24).fill(null),
-            Array(24).fill(null),
+            Array(COLUMN_HEIGHT).fill(null),
+            Array(COLUMN_HEIGHT).fill(null),
           ],
           /* cells: [
             {monzo: [0, 0], velocity: 0xFF},  // J4
@@ -76,8 +78,8 @@ export default {
             amplitudeGlide: 0.05,
           },
           patterns: [
-            Array(24).fill(null),
-            Array(24).fill(null),
+            Array(COLUMN_HEIGHT).fill(null),
+            Array(COLUMN_HEIGHT).fill(null),
           ],
         },
       ]
@@ -122,9 +124,6 @@ export default {
     },
     equaveCents() {
       return ratioToCents(this.equave);
-    },
-    columnHeight() {
-      return this.tracks[0].patterns[0].length;
     },
     pitchBendDepth() {
       return (this.l*this.pitchBendMonzo[0] + this.s*this.pitchBendMonzo[1]) / this.divisions * this.equaveCents;
@@ -171,6 +170,9 @@ export default {
     },
     activeCells() {
       return this.tracks[this.activeColumn].patterns[this.frames[this.activeFrame][this.activeColumn]];
+    },
+    columnHeight() {
+      return this.tracks[0].patterns[this.frames[this.activeFrame][0]].length;
     },
     beatDuration() {
       return 60 / this.beatsPerMinute;
@@ -519,8 +521,8 @@ export default {
           amplitudeGlide: 0.02,
         },
         patterns: [
-          Array(24).fill(null),
-          Array(24).fill(null),
+          Array(this.tracks[0].patterns[0].length).fill(null),
+          Array(this.tracks[0].patterns[1].length).fill(null),
         ],
       });
       this.frames.forEach((frame, i) => frame.push(i));
@@ -607,7 +609,7 @@ export default {
     <label for="flats">{{ flatsStr }}</label>
   </div>
   <div class="break"/>
-  <div>
+  <div class="track-container">
     <Track
       v-for="(cells, index) of cellsWithNotes" :cells="cells"
       :key="index"
@@ -643,6 +645,17 @@ export default {
   padding: 2rem;
 
   font-weight: normal;
+}
+
+.track-container {
+  display: flex;
+  width: 700px;
+  height: 700px;
+  overflow: scroll;
+}
+
+h1 {
+  font-size: 1.2em;
 }
 
 footer {

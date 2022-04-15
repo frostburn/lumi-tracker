@@ -1,5 +1,6 @@
 <script>
 import { WebMidi } from "webmidi";
+import TrackRowLabels from "./components/TrackRowLabels.vue";
 import Track from "./components/Track.vue";
 import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
 import MosModal from "./components/MosModal.vue";
@@ -14,6 +15,7 @@ const COLUMN_HEIGHT = 64;
 export default {
   components: {
     MosModal,
+    TrackRowLabels,
     Track,
     DiatonicKeyboard,
   },
@@ -612,6 +614,7 @@ export default {
   </div>
   <div class="break"/>
   <div class="track-container">
+    <TrackRowLabels :numRows="columnHeight" @click="(i) => activeRow = i"/>
     <Track
       v-for="(cells, index) of cellsWithNotes" :cells="cells"
       :key="index"

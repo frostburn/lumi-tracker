@@ -57,7 +57,7 @@ export default {
 
           <div class="modal-body">
             <template v-if="countL === null">
-              <span class="pyramid-row" v-for="n of [5, 6, 7, 8, 9, 10, 11]">
+              <span class="pyramid-row" v-for="n of [5, 6, 7, 8, 9, 10, 11, 12]">
                 <button v-for="l of n-1" @click="countL=l; countS=(n-l); updateTamnams(l, n-l)" @mouseenter="updateTamnams(l, n-l)" @focus="updateTamnams(l, n-l)">
                   {{l}}L {{n-l}}s
                 </button>
@@ -103,7 +103,7 @@ export default {
 }
 
 .modal-container {
-  width: 600px;
+  width: 700px;
   margin: 0px auto;
   padding: 20px 30px;
   background-color: #fff;

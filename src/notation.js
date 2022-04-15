@@ -49,7 +49,18 @@ const MOS_PATTERNS = {
     '7L 4s': 'LsLLsLsLLsL',
     '8L 3s': 'LsLLLsLLLsL',
     '9L 2s': 'LLsLLLLLsLL',
-    '10L 1s': 'LLLLLsLLLLL'
+    '10L 1s': 'LLLLLsLLLLL',
+    '1L 11s': 'Lsssssssssss',
+    '2L 10s': 'LsssssLsssss',
+    '3L 9s': 'LsssLsssLsss',
+    '4L 8s': 'sLssLssLssLs',
+    '5L 7s': 'LsLsLssLsLss',
+    '6L 6s': 'LsLsLsLsLsLs',
+    '7L 5s': 'LLsLsLLsLsLs',
+    '8L 4s': 'LsLLsLLsLLsL',
+    '9L 3s': 'LLLsLLLsLLLs',
+    '10L 2s': 'LLLLLsLLLLLs',
+    '11L 1s': 'LLLLLLLLLLLs',
 };
 
 const DEGREES_BY_MOS = {};

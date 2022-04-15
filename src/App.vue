@@ -39,10 +39,12 @@ export default {
       playing: false,
       activeRow: null,
       activeColumn: null,
+      activeFrame: 0,
       velocity: 0x80,
       inputMode: null,
       inputIndex: null,
       cancelRowCallback: null,
+      frames: [[0, 0], [1, 1]],
       tracks: [
         {
           instrument: {
@@ -51,7 +53,10 @@ export default {
             frequencyGlide: 0.01,
             amplitudeGlide: 0.02,
           },
-          cells: Array(24).fill(null),
+          patterns: [
+            Array(24).fill(null),
+            Array(24).fill(null),
+          ],
           /* cells: [
             {monzo: [0, 0], velocity: 0xFF},  // J4
             {monzo: [1, 0], velocity: 0xFF},  // K4
@@ -70,7 +75,10 @@ export default {
             frequencyGlide: 0.05,
             amplitudeGlide: 0.05,
           },
-          cells: Array(24).fill(null),
+          patterns: [
+            Array(24).fill(null),
+            Array(24).fill(null),
+          ],
         },
       ]
     }
@@ -116,7 +124,7 @@ export default {
       return ratioToCents(this.equave);
     },
     columnHeight() {
-      return this.tracks[0].cells.length;
+      return this.tracks[0].patterns[0].length;
     },
     pitchBendDepth() {
       return (this.l*this.pitchBendMonzo[0] + this.s*this.pitchBendMonzo[1]) / this.divisions * this.equaveCents;
@@ -144,8 +152,9 @@ export default {
     },
     cellsWithNotes() {
       const result = [];
-      this.tracks.forEach(track => {
-        result.push(track.cells.map(cell => {
+      this.tracks.forEach((track, i) => {
+        const cells = track.patterns[this.frames[this.activeFrame][i]];
+        result.push(cells.map(cell => {
           if (cell === null) {
             return {note: "", velocity: NaN};
           }
@@ -159,6 +168,9 @@ export default {
         }));
       });
       return result;
+    },
+    activeCells() {
+      return this.tracks[this.activeColumn].patterns[this.frames[this.activeFrame][this.activeColumn]];
     },
     beatDuration() {
       return 60 / this.beatsPerMinute;
@@ -202,8 +214,8 @@ export default {
     play() {
       this.cancelPlay();
       suspendAudio();
-      this.tracks.forEach(track => {
-        const cells = this.cellsToFrequencies(track.cells);
+      this.tracks.forEach((track, i) => {
+        const cells = this.cellsToFrequencies(track.patterns[this.frames[this.activeFrame][i]]);
         this.cancelCallbacks.push(playFrequencies(cells, track.instrument, this.beatDuration));
       });
       this.playing = true;
@@ -258,7 +270,7 @@ export default {
         return this.instrument.noteOn(frequency, velocity / 0xFF);
       } else if (this.inputMode === "note" && this.activeRow !== null) {
         if (this.activeRow >= 0 && this.activeRow < this.columnHeight) {
-          this.tracks[this.activeColumn].cells[this.activeRow] = { monzo, velocity };
+          this.activeCells[this.activeRow] = { monzo, velocity };
           this.incrementRow();
         }
       }
@@ -388,13 +400,13 @@ export default {
             delta = -1;
           }
           if (result !== undefined) {
-            this.tracks[this.activeColumn].cells[this.activeRow] = result;
+            this.activeCells[this.activeRow] = result;
             this.incrementRow(delta);
           }
         }
         if (this.inputMode === "velocity") {
           if ("0123456789ABCDEFabcdef".includes(event.key)) {
-            const cell = this.tracks[this.activeColumn].cells[this.activeRow];
+            const cell = this.activeCells[this.activeRow];
             if (cell?.velocity === undefined) {
               return;
             }
@@ -506,8 +518,12 @@ export default {
           frequencyGlide: 0.01,
           amplitudeGlide: 0.02,
         },
-        cells: Array(24).fill(null),
+        patterns: [
+          Array(24).fill(null),
+          Array(24).fill(null),
+        ],
       });
+      this.frames.forEach((frame, i) => frame.push(i));
     },
     selectNote(columnIndex, rowIndex) {
       this.activeColumn = columnIndex;
@@ -578,6 +594,7 @@ export default {
   </div>
   <div class="break"/>
   <div>
+    <input id="frame" v-model="activeFrame" type="number" min="0" :max="frames.length - 1" />
     <button @click="play">play</button>
     <button @click="stop">stop</button>
     <button @click="addTrack">add track</button>

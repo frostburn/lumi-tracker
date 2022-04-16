@@ -11,8 +11,8 @@ export default {
         },
     },
     methods: {
-        scrollIntoView() {
-            this.$refs.note.scrollIntoView();
+        scrollIntoView(options) {
+            this.$refs.note.scrollIntoView(options);
         },
     },
 }

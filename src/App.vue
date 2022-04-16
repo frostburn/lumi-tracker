@@ -225,11 +225,17 @@ export default {
       this.playing = false;
       this.activeRow = null;
     },
-    scrollIntoView() {
-      // TODO: Scroll into view on note input
+    scrollIntoView(options) {
+      if (options === undefined) {
+        options = {
+          behavior: "auto",
+          block: "nearest",
+          inline: "nearest",
+        };
+      }
       this.$nextTick().then(() => {
         const trackComponent = this.$refs.tracks[this.activeColumn || 0];
-        trackComponent.scrollIntoView();
+        trackComponent.scrollIntoView(options);
       });
     },
     play(extent) {
@@ -272,7 +278,11 @@ export default {
             return;
           }
         }
-        this.scrollIntoView();
+        this.scrollIntoView({
+          behavior: "auto",
+          block: "center",
+          inline: "center",
+        });
         index++;
         const [fire, cancel] = scheduleAction(startTime + beatDuration * index, activateNextRow.bind(this));
         this.cancelRowCallback = cancel;
@@ -323,6 +333,7 @@ export default {
         if (this.activeRow >= 0 && this.activeRow < this.columnHeight) {
           this.activeCells[this.activeRow] = { monzo, velocity };
           this.incrementRow();
+          this.scrollIntoView();
         }
       }
       return () => {};
@@ -490,6 +501,7 @@ export default {
           if (result !== undefined) {
             this.activeCells[this.activeRow] = result;
             this.incrementRow(delta);
+            this.scrollIntoView();
           }
         }
         if (this.inputMode === "velocity") {
@@ -507,6 +519,7 @@ export default {
             }
             cell.velocity = value;
             this.incrementRow();
+            this.scrollIntoView();
           }
         }
         if (event.key === "ArrowDown") {

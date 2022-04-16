@@ -8,8 +8,8 @@ export default {
     props: ["cells", "active", "activeRow", "inputMode", "inputIndex"],
     emits: ["noteClick", "velocityClick"],
     methods: {
-        scrollIntoView() {
-            this.$refs.cells[this.activeRow || 0].scrollIntoView();
+        scrollIntoView(options) {
+            this.$refs.cells[this.activeRow || 0].scrollIntoView(options);
         },
     },
 }

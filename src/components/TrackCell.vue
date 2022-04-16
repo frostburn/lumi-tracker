@@ -1,6 +1,6 @@
 <script>
 export default {
-    props: ['note', 'velocity', 'active', 'focused', 'inputMode', 'inputIndex'],
+    props: ['note', 'velocity', 'active', 'focused', 'inputMode', 'inputIndex', 'highlight'],
     emits: ['noteClick', 'velocityClick'],
     computed: {
         hexVelocity() {
@@ -19,7 +19,7 @@ export default {
 </script>
 
 <template>
-    <tr :class="{active}">
+    <tr :class="{active, highlight}">
         <td
             ref="note"
             class="note"
@@ -52,6 +52,10 @@ export default {
 
     .velocity {
         color: lightgreen;
+    }
+
+    .highlight {
+        background: #091906;
     }
 
     .active {

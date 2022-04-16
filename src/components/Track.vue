@@ -5,7 +5,7 @@ export default {
     components: {
         TrackCell,
     },
-    props: ["cells", "active", "activeRow", "inputMode", "inputIndex"],
+    props: ["cells", "active", "activeRow", "inputMode", "inputIndex", "highlightPeriod"],
     emits: ["noteClick", "velocityClick"],
     methods: {
         scrollIntoView(options) {
@@ -23,6 +23,7 @@ export default {
             :key="index"
             :active="index === activeRow"
             :focused="active && index === activeRow"
+            :highlight="index % highlightPeriod === 0"
             :inputMode="inputMode"
             :inputIndex="inputIndex"
             @noteClick="$emit('noteClick', index)"

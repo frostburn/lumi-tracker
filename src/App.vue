@@ -54,6 +54,7 @@ export default {
       activeFrame: 0,
       octave: REFERENCE_OCTAVE,
       velocity: 0x80,
+      highlightPeriod: 4,
       inputMode: null,
       inputIndex: null,
       cancelRowCallback: null,
@@ -759,7 +760,11 @@ export default {
     </tr>
   </table>
   <div class="track-container">
-    <TrackRowLabels :numRows="columnHeight" @click="(i) => activeRow = i"/>
+    <TrackRowLabels
+      :numRows="columnHeight"
+      @click="(i) => activeRow = i"
+      :highlightPeriod="highlightPeriod"
+    />
     <Track
       v-for="(cells, index) of cellsWithNotes" :cells="cells"
       :key="index"
@@ -768,6 +773,7 @@ export default {
       :activeRow="activeRow"
       :inputMode="inputMode"
       :inputIndex="inputIndex"
+      :highlightPeriod="highlightPeriod"
       @noteClick="(i) => selectNote(index, i)"
       @velocityClick="(i, j) => selectVelocity(index, i, j)"
     />

@@ -795,8 +795,8 @@ export default {
 
 .track-container {
   display: flex;
-  width: 700px;
-  height: 700px;
+  width: 900px;
+  height: 600px;
   overflow: scroll;
 }
 

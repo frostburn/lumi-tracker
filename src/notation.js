@@ -14,7 +14,7 @@ const MOS_PATTERNS = {
     '2L 5s': 'sLsssLs',
     '3L 4s': 'sLsLsLs',
     '4L 3s': 'LsLsLsL',
-    '5L 2s': 'LsLLLsL',
+    '5L 2s': 'LLsLLLs', // 'LsLLLsL',  XXX: Should there be a J version that is Dorian?
     '6L 1s': 'LLLsLLL',
     '1L 7s': 'Lsssssss',
     '2L 6s': 'LsssLsss',

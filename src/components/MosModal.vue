@@ -22,6 +22,11 @@ export default {
         if (pattern in MOS_PATTERN_NAMES) {
           name = MOS_PATTERN_NAMES[pattern];
         }
+        if (pattern === "LLsLLLs") {
+          name = name + " (Major)";
+        } else if (pattern === "LsLLsLL") {
+          name = name + " (Minor)";
+        }
         result.push([pattern, name]);
       });
       return result;

@@ -46,7 +46,7 @@ export default {
       accidentals: "sharps",
       pitchBendMonzo: [1, 0],
       baseFrequency: REFERENCE_FREQUENCY,
-      beatsPerMinute: 200,
+      beatsPerMinute: 480,
       audioDelay: 5,
       playing: false,
       activeRow: null,
@@ -232,11 +232,20 @@ export default {
         trackComponent.scrollIntoView();
       });
     },
-    play() {
+    play(extent) {
       this.cancelPlay();
       suspendAudio();
       this.tracks.forEach((track, i) => {
-        const cells = this.cellsToFrequencies(track.patterns[this.frames[this.activeFrame][i]]);
+        const cells = [];
+        if (extent === "frame") {
+          const activeCells = this.cellsToFrequencies(track.patterns[this.frames[this.activeFrame][i]]);
+          Array.prototype.push.apply(cells, activeCells);
+        } else if (extent === "song") {
+          this.frames.forEach(frame => {
+            const frameCells = this.cellsToFrequencies(track.patterns[frame[i]]);
+            Array.prototype.push.apply(cells, frameCells);
+          });
+        }
         const instrument = {
           waveform: track.instrument.waveform,
           frequencyGlide: track.instrument.frequencyGlide / 1000,
@@ -248,18 +257,30 @@ export default {
 
       const ctx = getAudioContext();
       const startTime = ctx.currentTime;
+      const beatDuration = this.beatDuration;
+      let index = 0;
       function activateNextRow() {
         if (!this.playing) {
           return;
         }
-        if (!this.incrementRow()) {
-          return;
+        if (extent === "song"){
+          if (!this.incrementRowOrFrame()) {
+            return;
+          }
+        } else {
+          if (!this.incrementRow()) {
+            return;
+          }
         }
         this.scrollIntoView();
-        const [fire, cancel] = scheduleAction(startTime + this.beatDuration * (this.activeRow + 1), activateNextRow.bind(this));
+        index++;
+        const [fire, cancel] = scheduleAction(startTime + beatDuration * index, activateNextRow.bind(this));
         this.cancelRowCallback = cancel;
       }
       this.activeRow = -1;
+      if (extent === "song") {
+        this.activeFrame = 0;
+      }
       activateNextRow.bind(this)();
 
       resumeAudio();
@@ -412,6 +433,18 @@ export default {
         if (this.activeRow >= this.columnHeight) {
           this.activeRow = this.columnHeight - 1;
         }
+      }
+      return true;
+    },
+    incrementRowOrFrame() {
+      if (this.activeRow >= this.columnHeight - 1) {
+        if (this.activeFrame >= this.frames.length - 1) {
+          return false;
+        }
+        this.activeRow = 0;
+        this.activeFrame++;
+      } else {
+        this.activeRow++;
       }
       return true;
     },
@@ -592,6 +625,13 @@ export default {
       });
       this.frames.forEach((frame, i) => frame.push(i));
     },
+    addFrame() {
+      this.tracks.forEach(track => {
+        track.patterns.push(Array(this.columnHeight).fill(null));
+      });
+      const newPattern = this.frames.length;
+      this.frames.push(Array(this.tracks.length).fill(newPattern));
+    },
     selectNote(columnIndex, rowIndex) {
       this.activeColumn = columnIndex;
       this.activeRow = rowIndex;
@@ -657,8 +697,12 @@ export default {
   </Teleport>
 
   <div>
+    <label for="audio-delay">Audio delay (ms): </label>
     <input id="audio-delay" v-model="audioDelay" type="number" min="0" />
-    <label for="audio-delay"> audio delay (ms) </label>
+
+    <label for="tempo"> BPM: </label>
+    <input id="tempo" v-model="beatsPerMinute" type="number" min="1" />
+
     <button id="select-mos" @click="showMosModal = true">select MOS</button>
     <label for="select-mos"> = {{ mosPattern }}</label>
   </div>
@@ -672,10 +716,12 @@ export default {
     <input id="equave" v-model="equave" type="number" step="0.01">
     <label for="frame"> Frame: </label>
     <input id="frame" v-model="activeFrame" type="number" min="0" :max="frames.length - 1" />
+    <button @click="addFrame">add frame</button>
   </div>
   <div class="break"/>
   <div>
-    <button @click="play">play</button>
+    <button @click="play('song')">play song</button>
+    <button @click="play('frame')">play frame</button>
     <button @click="stop">stop</button>
     <button @click="addTrack">add track</button>
 

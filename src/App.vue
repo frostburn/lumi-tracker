@@ -242,16 +242,15 @@ export default {
       this.cancelPlay();
       suspendAudio();
       this.tracks.forEach((track, i) => {
-        const cells = [];
+        let cells = [];
         if (extent === "frame") {
-          const activeCells = this.cellsToFrequencies(track.patterns[this.frames[this.activeFrame][i]]);
-          Array.prototype.push.apply(cells, activeCells);
+          cells = track.patterns[this.frames[this.activeFrame][i]];
         } else if (extent === "song") {
           this.frames.forEach(frame => {
-            const frameCells = this.cellsToFrequencies(track.patterns[frame[i]]);
-            Array.prototype.push.apply(cells, frameCells);
+            cells = cells.concat(track.patterns[frame[i]]);
           });
         }
+        cells = this.cellsToFrequencies(cells);
         const instrument = {
           waveform: track.instrument.waveform,
           frequencyGlide: track.instrument.frequencyGlide / 1000,

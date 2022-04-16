@@ -211,6 +211,7 @@ export class Monophone {
         this.vibratoFrequency.setValueAtTime(7, ctx.currentTime);
 
         this.stack = [];
+        this.stackDepletionTime = -10000;
     }
 
     dispose() {
@@ -229,7 +230,17 @@ export class Monophone {
         if (this.stack.length) {
             this.oscillator.detune.setTargetAtTime(cents, now, this.frequencyGlide);
         } else {
-            this.oscillator.detune.setValueAtTime(cents, now);
+            const decayDuration = now - this.stackDepletionTime;
+            const releaseDuration = this.amplitudeGlide * 1.75;
+            if (decayDuration < releaseDuration) {
+                this.oscillator.detune.setTargetAtTime(
+                    cents,
+                    now,
+                    Math.min(this.frequencyGlide, releaseDuration - decayDuration) * 0.5
+                );
+            } else {
+                this.oscillator.detune.setValueAtTime(cents, now);
+            }
         }
         const id = Symbol();
         const voice = {cents, velocity, id};
@@ -238,13 +249,14 @@ export class Monophone {
         function noteOff() {
             const then = safeNow();
             if (!this.stack.length) {
-                console.log("Warning: Note off with an empty stack");
+                console.warn("Note off with an empty stack");
                 this.envelope.gain.setTargetAtTime(0, then, this.amplitudeGlide);
             }
             if (this.stack[this.stack.length - 1].id === id) {
                 this.stack.pop();
                 if (!this.stack.length) {
                     this.envelope.gain.setTargetAtTime(0, then, this.amplitudeGlide);
+                    this.stackDepletionTime = then;
                     return;
                 }
                 const topVoice = this.stack[this.stack.length - 1];

@@ -6,7 +6,7 @@ import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
 import ComputerKeyboard from "./components/ComputerKeyboard.vue";
 import MosModal from "./components/MosModal.vue";
 import InstrumentModal from "./components/InstrumentModal.vue";
-import { mod, NOTE_OFF, REFERENCE_FREQUENCY, ratioToCents } from "./util.js";
+import { mod, NOTE_OFF, REFERENCE_FREQUENCY, REFERENCE_OCTAVE, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, setAudioDelay } from "./audio.js";
 import { Monophone, availableWaveforms, setWaveform } from "./audio.js";
@@ -52,6 +52,7 @@ export default {
       activeRow: null,
       activeColumn: null,
       activeFrame: 0,
+      octave: REFERENCE_OCTAVE,
       velocity: 0x80,
       inputMode: null,
       inputIndex: null,
@@ -291,6 +292,9 @@ export default {
       if (velocity === undefined) {
         velocity = this.velocity;
       }
+      const octave = this.octave - REFERENCE_OCTAVE;
+      monzo[0] += this.countL * octave;
+      monzo[1] += this.countS * octave;
       if (this.inputMode === null) {
         const frequency = this.baseFrequency * Math.exp(this.natsL * monzo[0] + this.natsS * monzo[1]);
         return this.instrument.noteOn(frequency, velocity / 0xFF);
@@ -411,13 +415,30 @@ export default {
       }
       return true;
     },
+    ignoreKeydown(event) {
+      if (event?.target instanceof HTMLInputElement && event?.target?.type !== "range") {
+        return true;
+      } else if (event?.target instanceof HTMLSelectElement) {
+        return true;
+      }
+      return false;
+    },
     windowKeydown(event) {
+      if (this.ignoreKeydown(event)) {
+        return;
+      }
       if (event.code === "Backquote") {
         this.computerKeyboard.deactivate();
         this.activeComputerKeys.add(event.code);
       }
       if (["ShiftLeft", "ShiftRight"].includes(event.code)) {
         this.activeComputerKeys.add(event.code);
+      }
+      if (event.code === "NumpadDivide") {
+        this.octave--;
+      }
+      if (event.code === "NumpadMultiply") {
+        this.octave++;
       }
       if (this.activeRow >= 0 && this.activeRow < this.columnHeight) {
         if (this.inputMode === "note") {
@@ -500,9 +521,7 @@ export default {
       }
     },
     computerKeydown(event) {
-      if (event?.target instanceof HTMLInputElement && event?.target?.type !== "range") {
-        return;
-      } else if (event?.target instanceof HTMLSelectElement) {
+      if (this.ignoreKeydown(event)) {
         return;
       }
       if (event.code === "Backquote") {
@@ -645,21 +664,25 @@ export default {
   </div>
   <div class="break" />
   <div>
+    <label for="l">L=</label>
     <input id="l" v-model="l" type="number">
-    <label for="l"> L </label>
+    <label for="s"> s=</label>
     <input id="s" v-model="s" type="number">
-    <label for="s"> s </label>
     <label for="equave"> = {{divisions}}ed</label>
     <input id="equave" v-model="equave" type="number" step="0.01">
+    <label for="frame"> Frame: </label>
+    <input id="frame" v-model="activeFrame" type="number" min="0" :max="frames.length - 1" />
   </div>
   <div class="break"/>
   <div>
-    <input id="frame" v-model="activeFrame" type="number" min="0" :max="frames.length - 1" />
     <button @click="play">play</button>
     <button @click="stop">stop</button>
     <button @click="addTrack">add track</button>
 
-    <label>Accidentals: </label>
+    <label for="octave"> Octave: </label>
+    <input id="octave" type="number" v-model="octave" />
+
+    <label> Accidentals: </label>
     <input type="radio" id="sharps" value="sharps" v-model="accidentals" />
     <label for="sharps">{{ sharpsStr }} </label>
 
@@ -719,7 +742,7 @@ export default {
 #app {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0 2rem;
 
   font-weight: normal;
 }
@@ -769,15 +792,9 @@ a,
   }
 }
 
-@media (min-width: 1024px) {
-  body {
-    background: darkgray;
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    padding: 0 2rem;
-  }
+body {
+  background: darkgray;
+  display: flex;
+  place-items: center;
 }
 </style>

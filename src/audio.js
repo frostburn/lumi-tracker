@@ -123,17 +123,16 @@ function createWaveforms() {
         new Float32Array([0,  0, 0, 0, 0, 0,0,0,0,0,0,0])
     )
 
-    // Semisine
-    const harmonics = [0];  // Use [1] if you don't need the DC block
-    let value;
-    let i = 1;
-    do {
-        value = 1 / ((2*i)**2-1)
-        harmonics.push(value);
-        i += 1;
-    } while (value > 0.0001);
-    const zeroComponents = Array(harmonics.length).fill(0);
-    PERIODIC_WAVES["semisine"] = AUDIO_CTX.createPeriodicWave(new Float32Array(zeroComponents), new Float32Array(harmonics));
+    // DC-blocked semisine
+    const semisineSineComponents = new Float32Array(64);
+    const semisineCosineComponents = new Float32Array(64);
+    for (let n = 1; n < 64; ++n) {
+        semisineCosineComponents[n] = 1 / (1 - 4*n*n);
+    }
+    PERIODIC_WAVES["semisine"] = AUDIO_CTX.createPeriodicWave(
+        semisineSineComponents,
+        semisineCosineComponents
+    );
 
     // Elliptic Theta 3
     [1, 0.5, 0.25, 0.1, 0.05].forEach((softness, index) => {

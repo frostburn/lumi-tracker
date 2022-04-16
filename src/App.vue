@@ -34,6 +34,7 @@ export default {
       midiNoteOffCallbacks: new Map(),
       midiInputs: [],
       midiInput: null,
+      midiUseOctave: false,
       activeMidiKeys: new Set(),
       onScreenNoteOffCallback: null,
       cancelCallbacks: [],
@@ -364,6 +365,11 @@ export default {
       const number = event.note.number;
       this.activeMidiKeys.add(number);
       const monzo = this.midiNumberToMonzo(number - MIDDLE_C);
+      if (!this.midiUseOctave) {
+        const octave = this.octave - REFERENCE_OCTAVE;
+        monzo[0] -= this.countL * octave;
+        monzo[1] -= this.countS * octave;
+      }
       const noteOff = this.noteOn(monzo, event.rawVelocity*2);
       if (this.midiNoteOffCallbacks.has(number)) {
         this.midiNoteOffCallbacks.get(number)();
@@ -730,6 +736,8 @@ export default {
     <label for="frame"> Frame: </label>
     <input id="frame" v-model="activeFrame" type="number" min="0" :max="frames.length - 1" />
     <button @click="addFrame">add frame</button>
+    <label for="velocity"> Velocity: </label>
+    <input id="velocity" v-model="velocity" type="number" min="0" max="255" />
   </div>
   <div class="break"/>
   <div>
@@ -786,6 +794,8 @@ export default {
         <option disabled="disabled" selected="selected" value="">--Select device--</option>
         <option v-for="input of midiInputs" :value="input.id">{{ (input.manufacturer || "(Generic)") + ": " + input.name }}</option>
       </select>
+      <label for="midi-use-octave"> Use 8ve: </label>
+      <input id="midi-use-octave" type="checkbox" v-model="midiUseOctave" />
       <div class="break"/>
       <div>
         <DiatonicKeyboard @noteOn="onScreenNoteOn" :activeKeys="activeMiniKeys"/>

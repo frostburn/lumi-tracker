@@ -5,6 +5,7 @@ import Track from "./components/Track.vue";
 import DiatonicKeyboard from "./components/DiatonicKeyboard.vue";
 import ComputerKeyboard from "./components/ComputerKeyboard.vue";
 import MosModal from "./components/MosModal.vue";
+import EdoModal from "./components/EdoModal.vue";
 import InstrumentModal from "./components/InstrumentModal.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, REFERENCE_OCTAVE, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
@@ -18,6 +19,7 @@ const COLUMN_HEIGHT = 64;
 export default {
   components: {
     MosModal,
+    EdoModal,
     InstrumentModal,
     TrackRowLabels,
     Track,
@@ -39,6 +41,7 @@ export default {
       onScreenNoteOffCallback: null,
       cancelCallbacks: [],
       showMosModal: false,
+      showEdoModal: false,
       showInstrumentModal: false,
       mosPattern: "LLsLLLs",
       l: 2,
@@ -671,10 +674,16 @@ export default {
       this.mosPattern = pattern;
       this.showMosModal = false;
     },
+    chooseEdo(l, s, pattern) {
+      this.l = l;
+      this.s = s;
+      this.mosPattern = pattern;
+      this.showEdoModal = false;
+    },
     openInstrumentModal(instrument) {
       this.activeInstrument = instrument;
       this.showInstrumentModal = true;
-    }
+    },
   },
   async mounted() {
     this.activeInstrument = this.tracks[0].instrument;
@@ -712,6 +721,10 @@ export default {
   </Teleport>
 
   <Teleport to="body">
+    <EdoModal :show="showEdoModal" @close="showEdoModal = false" @select="chooseEdo" />
+  </Teleport>
+
+  <Teleport to="body">
     <InstrumentModal :show="showInstrumentModal" @close="showInstrumentModal = false" :instrument="activeInstrument" />
   </Teleport>
 
@@ -722,6 +735,7 @@ export default {
     <label for="tempo"> BPM: </label>
     <input id="tempo" v-model="beatsPerMinute" type="number" min="1" />
 
+    <button id="select-edo" @click="showEdoModal = true">select EDO</button>
     <button id="select-mos" @click="showMosModal = true">select MOS</button>
     <label for="select-mos"> = {{ mosPattern }}</label>
   </div>
@@ -870,5 +884,70 @@ body {
   background: darkgray;
   display: flex;
   place-items: center;
+}
+
+/* === Modals === */
+
+.modal-mask {
+  position: fixed;
+  z-index: 9998;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: table;
+  transition: opacity 0.3s ease;
+}
+
+.modal-wrapper {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+.modal-container {
+  width: 700px;
+  margin: 0px auto;
+  padding: 20px 30px;
+  background-color: #fff;
+  border-radius: 2px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.33);
+  transition: all 0.3s ease;
+}
+
+.modal-header h3 {
+  margin-top: 0;
+  color: #42b983;
+}
+
+.modal-body {
+  margin: 20px 0;
+}
+
+.modal-default-button {
+  float: right;
+}
+
+/*
+ * The following styles are auto-applied to elements with
+ * transition="modal" when their visibility is toggled
+ * by Vue.js.
+ *
+ * You can easily play with the modal transition by editing
+ * these styles.
+ */
+
+.modal-enter-from {
+  opacity: 0;
+}
+
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal-container,
+.modal-leave-to .modal-container {
+  -webkit-transform: scale(1.1);
+  transform: scale(1.1);
 }
 </style>

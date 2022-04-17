@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { mosMonzoToSmitonic, mosMonzoToJ, mosMonzoToDiatonic } from "../notation.js";
+import { mosMonzoToSmitonic, mosMonzoToJ, mosMonzoToDiatonic, getHardness } from "../notation.js";
 
 describe("Smitonic notation", () => {
   it("matches up with generic", () => {
@@ -34,5 +34,21 @@ describe("Diatonic notation", () => {
     const triple = mosMonzoToDiatonic([-3, 3]).slice(1, 3);
     const quadruple = mosMonzoToDiatonic([-4, 4]).slice(1, 3);
     expect(triple).toEqual(quadruple);
+  });
+});
+
+describe("Hardness", () => {
+  it("supports exact ratios", () => {
+    expect(getHardness(2, 1)).toEqual("basic");
+  });
+  it("supports ranges", () => {
+    expect(getHardness(5, 4)).toEqual("ultrasoft");
+  });
+  it("can handle reversed inputs", () => {
+    expect(getHardness(1, 5)).toEqual("anti-ultrahard");
+  });
+  it("can handle negative inputs", () => {
+    expect(getHardness(-7, 4)).toEqual("quasi-minisoft");
+    expect(getHardness(7, -3)).toEqual("pseudo-minihard");
   });
 });

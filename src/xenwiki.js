@@ -1,3 +1,5 @@
+import { mosPatterns } from "./notation.js";
+
 const TAMNAMS_MOS_NAMES = {
     // 5-note
     "2L 3s": {
@@ -164,6 +166,9 @@ const TAMNAMS_MOS_NAMES = {
 };
 
 export const MOS_PATTERN_NAMES = {
+    "LsLsLs": "Tonic",
+    "sLsLsL": "Dominant",
+
     "Lssssss": "Chinchillian",
     "sLsssss": "Badgerian",
     "ssLssss": "Zebrian",
@@ -212,6 +217,9 @@ export const MOS_PATTERN_NAMES = {
     "LLsLLLLL": "Salmon",
     "LsLLLLLL": "Starfish",
     "sLLLLLLL": "Whale",
+
+    "LsLsLsLs": "Tonic",
+    "sLsLsLsL": "Dominant",
 
     "LsLssLss": "Anti-Sarnathian",
     "LssLsLss": "Anti-Hlanithian",
@@ -273,4 +281,21 @@ export function tamnamsName(mos) {
             return TAMNAMS_MOS_NAMES[superMos].name + " (subset)";
         }
     }
+}
+
+export function mosPatternsWithNames(countL, countS) {
+    const result = [];
+    mosPatterns(countL, countS).forEach(pattern => {
+        let name = "";
+        if (pattern in MOS_PATTERN_NAMES) {
+            name = MOS_PATTERN_NAMES[pattern];
+        }
+        if (pattern === "LLsLLLs") {
+            name = name + " (Major)";
+        } else if (pattern === "LsLLsLL") {
+            name = name + " (Minor)";
+        }
+        result.push([pattern, name]);
+    });
+    return result;
 }

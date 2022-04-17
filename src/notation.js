@@ -63,6 +63,95 @@ const MOS_PATTERNS = {
     '11L 1s': 'LLLLLLLLLLLs',
 };
 
+export const MOS_BY_EDO = new Map();
+
+const HARDNESS_RATIOS = [
+    ["equalized", 1, 1],
+    ["supersoft", 4, 3],
+    ["soft", 3, 2],
+    ["semisoft", 5, 3],
+    ["basic", 2, 1],
+    ["semihard", 5, 2],
+    ["hard", 3, 1],
+    ["superhard", 4, 1],
+    ["paucitonic", 1, 0],
+];
+
+const HARDNESS_RANGES = [
+    ["ultrasoft", 6, 8],
+    ["parasoft", 8, 9],
+    ["quasisoft", 9, 10],
+    ["minisoft", 10, 12],
+    ["minihard", 12, 15],
+    ["quasihard", 15, 18],
+    ["parahard", 18, 24],
+    ["ultrahard", 24, Infinity],
+];
+
+export function getHardness(l, s) {
+    let prefix = "";
+    if (l < 0) {
+        prefix = "quasi-" + prefix;
+        l = -l;
+    }
+    if (s < 0) {
+        prefix = "pseudo-" + prefix;
+        s = -s;
+    }
+    if (s > l) {
+        prefix = "anti-" + prefix;
+        [l, s] = [s, l];
+    }
+    for (let i = 0; i < HARDNESS_RATIOS.length; ++i) {
+        const [name, large, small] = HARDNESS_RATIOS[i];
+        if (l*small == large*s) {
+            return prefix + name;
+        }
+    }
+    for (let i = 0; i < HARDNESS_RANGES.length; ++i) {
+        const [name, low, high] = HARDNESS_RANGES[i];
+        if (low*s < 6*l && 6*l < high*s) {
+            return prefix + name;
+        }
+    }
+    throw "Unable to determine hardness";
+}
+
+// Populate MOS_BY_EDO
+const hardnesses = [
+    [1, 0],
+    [1, 1],
+    [2, 1],
+    [3, 1], [3, 2],
+    [4, 1], [4, 3],
+    [5, 1], [5, 2], [5, 3], [5, 4],
+];
+
+for (let size = 5; size <= 12; ++size) {
+    for (let countL = 1; countL < size; countL++) {
+        const countS = size - countL;
+        hardnesses.forEach(([l, s]) => {
+            const edo = countL*l + countS*s;
+            const info = [countL, countS, l, s];
+            const infos = MOS_BY_EDO.get(edo) || [];
+            infos.push(info);
+            MOS_BY_EDO.set(edo, infos);
+        });
+    }
+}
+
+// Extra diatonics
+for (let l = 6; l < 12; ++l) {
+    for (let s = 1; s < l; ++s) {
+        if (gcd(l, s) === 1) {
+            const edo = 5*l + 2*s;
+            if (edo <= 59) {
+                MOS_BY_EDO.get(edo).unshift([5, 2, l, s]);
+            }
+        }
+    }
+}
+
 const DEGREES_BY_MOS = {};
 
 for (const mos in MOS_PATTERNS) {

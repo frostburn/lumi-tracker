@@ -4,6 +4,7 @@ import { tamnamsName, mosPatternsWithNames } from "../xenwiki.js";
 export default {
   props: {
     show: Boolean,
+    currentMos: String,
   },
   emits: ["close", "selectPattern"],
   data() {
@@ -49,7 +50,13 @@ export default {
           <div class="modal-body">
             <template v-if="countL === null">
               <span class="pyramid-row" v-for="n of [5, 6, 7, 8, 9, 10, 11, 12]">
-                <button v-for="l of n-1" @click="countL=l; countS=(n-l); updateTamnams(l, n-l)" @mouseenter="updateTamnams(l, n-l)" @focus="updateTamnams(l, n-l)">
+                <button
+                  v-for="l of n-1"
+                  @click="countL=l; countS=(n-l); updateTamnams(l, n-l)"
+                  @mouseenter="updateTamnams(l, n-l)"
+                  @focus="updateTamnams(l, n-l)"
+                  :class="{ current: `${l}L ${n-l}s` === currentMos }"
+                >
                   {{l}}L {{n-l}}s
                 </button>
               </span>
@@ -84,4 +91,9 @@ export default {
 .name::before{
    content: "\200B";
 }
+
+.current {
+  background: darkgray;
+}
+
 </style>

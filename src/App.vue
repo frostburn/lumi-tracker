@@ -721,7 +721,7 @@ export default {
   </Teleport>
 
   <Teleport to="body">
-    <EdoModal :show="showEdoModal" @close="showEdoModal = false" @select="chooseEdo" />
+    <EdoModal ref="edoModal" :show="showEdoModal" @close="showEdoModal = false" @select="chooseEdo" />
   </Teleport>
 
   <Teleport to="body">
@@ -735,7 +735,7 @@ export default {
     <label for="tempo"> BPM: </label>
     <input id="tempo" v-model="beatsPerMinute" type="number" min="1" />
 
-    <button id="select-edo" @click="showEdoModal = true">select EDO</button>
+    <button id="select-edo" @click="showEdoModal = true; $refs.edoModal.edo = divisions">select EDO</button>
     <button id="select-mos" @click="showMosModal = true">select MOS</button>
     <label for="select-mos"> = {{ mosPattern }}</label>
   </div>

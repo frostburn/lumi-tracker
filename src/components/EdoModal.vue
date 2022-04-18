@@ -70,7 +70,7 @@ export default {
               <input type="number" v-model="edo" min="1" max="59" />
               <div v-for="[_countL, _countS, _l, _s] of mosses">
                 <button
-                  @click="countL = _countL; countS = _countS; l = _l; s = _s"
+                  @click="countL = _countL; countS = _countS; l = _l; s = _s; updateTamnams(_countL, _countS)"
                   @mouseenter="updateTamnams(_countL, _countS)"
                   @focus="updateTamnams(_countL, _countS)"
                 >

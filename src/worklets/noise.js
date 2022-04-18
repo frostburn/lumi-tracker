@@ -18,6 +18,8 @@ function normal() {
   return jkiss31.normal();
 }
 
+const LEAK = 0.9;
+
 class Noise extends AudioWorkletProcessor {
 
   // Static getter to define AudioParam objects in this custom processor.
@@ -44,11 +46,11 @@ class Noise extends AudioWorkletProcessor {
     this.tableDelta = 0.02;
 
     this.model = rand;
-    this.linear = false;
 
-    this.value0 = this.model();
-    this.value1 = this.model();
-    this.speed = 1;
+    this.pre = [];
+    this.post = [this.model()];
+
+    this.speed = 0;
 
     this.tables = {
       amplitude: {
@@ -88,11 +90,26 @@ class Noise extends AudioWorkletProcessor {
       } else {
         this.model = rand;
       }
-      this.value0 = this.model();
-      this.value1 = this.model();
-    } else if (data.type === "linear") {
-      this.linear = data.value;
+    } else if (data.type === "preStages") {
+      this.pre = Array(data.value).fill(0);
+      for (let i = 0; i < data.value; ++i) {
+        this.generateValue();
+      }
+    } else if (data.type === "postStages") {
+      this.post = Array(data.value+1).fill(0);
     }
+  }
+
+  generateValue() {
+    let newValue = this.model();
+    let oldValue;
+    for (let j = 0; j < this.pre.length; ++j) {
+      oldValue = this.pre[j];
+      this.pre[j] = newValue;
+      newValue = newValue - oldValue;
+    }
+
+    this.post[this.post.length - 1] = newValue;
   }
 
   process(inputs, outputs, parameters) {
@@ -109,28 +126,33 @@ class Noise extends AudioWorkletProcessor {
 
       const frequency = Math.exp(
         natValues[Math.min(natValues.length-1, i)] +
-        getTableValue(x, this.tables.nat)
+        getTableValue(x, this.tables.nat) +
+        this.speed
       );
       const amplitude = getTableValue(x, this.tables.amplitude);
 
-      if (this.linear) {
-        channel[i] = this.value0 + (this.value1 - this.value0) * this.phase;
-      } else {
-        channel[i] = this.value1;
+      const dp = frequency * dt;
+      const dl = LEAK**dp;
+
+      // TODO: Volume compensation for high frequencies or more accurate integration.
+      for (let j = 0; j < this.post.length - 1; ++j) {
+        this.post[j] = this.post[j] * dl + this.post[j+1] * dp;
       }
 
+      channel[i] = this.post[0];
+
       this.tOnset += dt;
-      this.phase += this.speed * frequency * dt;
+      this.phase += dp;
       if (this.phase > 1) {
         this.phase %= 1;
-        this.value0 = this.value1;
-        this.value1 = this.model();
+
+        this.generateValue();
 
         const jitter = (
           jitterValues[Math.min(jitterValues.length-1, i)] +
           getTableValue(x, this.tables.jitter)
         );
-        this.speed = Math.max(EPSILON, Math.exp(jitter * this.model()));
+        this.speed = jitter * this.model();
       }
     }
 

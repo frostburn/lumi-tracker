@@ -279,7 +279,7 @@ export class Monophone {
 
 // TODO: Monophone super class
 export class Noise {
-    constructor(model="jkiss", linear=false, tableDelta=0.02, frequencyGlide=0.009, amplitudeGlide=0.005) {
+    constructor(model="jkiss", preStages=1, postStages=1, tableDelta=0.02, frequencyGlide=0.009, amplitudeGlide=0.005) {
         this.frequencyGlide = frequencyGlide;
         this.amplitudeGlide = amplitudeGlide;
         const ctx = getAudioContext();
@@ -287,7 +287,8 @@ export class Noise {
         this.generator = new AudioWorkletNode(ctx, "noise");
         this.jitter = this.generator.parameters.get("jitter");
         this.jitter.setValueAtTime(0, ctx.currentTime);
-        this.generator.port.postMessage({ type: "linear", value: linear });
+        this.generator.port.postMessage({ type: "preStages", value: preStages });
+        this.generator.port.postMessage({ type: "postStages", value: postStages });
         this.generator.port.postMessage({ type: "model", value: model });
         this.generator.port.postMessage({ type: "tableDelta", value: tableDelta });
         this._centsToNats = ctx.createGain();

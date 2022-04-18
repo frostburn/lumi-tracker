@@ -10,7 +10,7 @@ import InstrumentModal from "./components/InstrumentModal.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, REFERENCE_OCTAVE, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, setAudioDelay } from "./audio.js";
-import { Monophone, availableWaveforms, setWaveform } from "./audio.js";
+import { Monophone, availableWaveforms, setWaveform, loadAudioWorklets, Noise } from "./audio.js";
 import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
 
@@ -698,6 +698,7 @@ export default {
       await WebMidi.enable();
       this.midiInputs = WebMidi.inputs;
     }
+    await loadAudioWorklets();
   },
   unmounted() {
     this.computerKeyboard.removeEventListener("keydown", this.computerKeydown);

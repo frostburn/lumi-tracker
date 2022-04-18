@@ -35,6 +35,12 @@ export function getAudioContext() {
     return AUDIO_CTX;
 }
 
+export async function loadAudioWorklets() {
+    const ctx = getAudioContext();
+    // Relative to index.html
+    await ctx.audioWorklet.addModule('./src/worklets/noise.js');
+}
+
 export function suspendAudio() {
     const ctx = getAudioContext();
     ctx.suspend();
@@ -261,6 +267,97 @@ export class Monophone {
                 }
                 const topVoice = this.stack[this.stack.length - 1];
                 this.oscillator.detune.setTargetAtTime(topVoice.cents, then, this.frequencyGlide);
+                this.envelope.gain.setTargetAtTime(0.5*topVoice.velocity, then, this.amplitudeGlide);
+            } else {
+                this.stack.splice(this.stack.indexOf(voice), 1);
+            }
+        }
+
+        return noteOff.bind(this);
+    }
+}
+
+// TODO: Monophone super class
+export class Noise {
+    constructor(model="jkiss", linear=false, tableDelta=0.02, frequencyGlide=0.009, amplitudeGlide=0.005) {
+        this.frequencyGlide = frequencyGlide;
+        this.amplitudeGlide = amplitudeGlide;
+        const ctx = getAudioContext();
+        // TODO: Noise bank
+        this.generator = new AudioWorkletNode(ctx, "noise");
+        this.jitter = this.generator.parameters.get("jitter");
+        this.jitter.setValueAtTime(0, ctx.currentTime);
+        this.generator.port.postMessage({ type: "linear", value: linear });
+        this.generator.port.postMessage({ type: "model", value: model });
+        this.generator.port.postMessage({ type: "tableDelta", value: tableDelta });
+        this._centsToNats = ctx.createGain();
+        this._centsToNats.gain.setValueAtTime(Math.log(2)/1200, ctx.currentTime);
+        this.pitchBend = ctx.createConstantSource();
+        this.pitchBend.start(ctx.currentTime);
+        this.pitchBend.connect(this._centsToNats).connect(this.generator.parameters.get("nat"));
+        this.detune = this.pitchBend.offset;
+        this.envelope = ctx.createGain();
+        this.envelope.gain.setValueAtTime(0, ctx.currentTime);
+        this.generator.connect(this.envelope).connect(ctx.destination);
+
+        this.vibratoGain = ctx.createGain();
+        this.vibratoDepth = this.vibratoGain.gain;
+        this.vibratoDepth.setValueAtTime(0, ctx.currentTime);
+        this.vibratoOscillator = obtainOscillator();
+        this.vibratoOscillator.connect(this.vibratoGain).connect(this._centsToNats);
+        this.vibratoFrequency = this.vibratoOscillator.frequency;
+        this.vibratoFrequency.setValueAtTime(7, ctx.currentTime);
+
+        this.stack = [];
+        this.stackDepletionTime = -10000;
+    }
+
+    dispose() {
+        disposeOscillator(this.vibratoOscillator);
+        this.pitchBend.disconnect();
+        this.pitchBend.stop();
+    }
+
+    noteOn(frequency, velocity) {
+        const nats = Math.log(frequency);
+        const ctx = getAudioContext();
+        const now = safeNow();
+        this.envelope.gain.cancelScheduledValues(now);
+        this.envelope.gain.setTargetAtTime(0.5*velocity, now, this.amplitudeGlide);
+        if (this.stack.length) {
+            this.generator.parameters.get("nat").setTargetAtTime(nats, now, this.frequencyGlide);
+        } else {
+            const decayDuration = now - this.stackDepletionTime;
+            const releaseDuration = this.amplitudeGlide * 1.75;
+            if (decayDuration < releaseDuration) {
+                this.generator.parameters.get("nat").setTargetAtTime(
+                    nats,
+                    now,
+                    Math.min(this.frequencyGlide, releaseDuration - decayDuration) * 0.5
+                );
+            } else {
+                this.generator.parameters.get("nat").setValueAtTime(nats, now);
+            }
+        }
+        const id = Symbol();
+        const voice = {nats, velocity, id};
+        this.stack.push(voice);
+
+        function noteOff() {
+            const then = safeNow();
+            if (!this.stack.length) {
+                console.warn("Note off with an empty stack");
+                this.envelope.gain.setTargetAtTime(0, then, this.amplitudeGlide);
+            }
+            if (this.stack[this.stack.length - 1].id === id) {
+                this.stack.pop();
+                if (!this.stack.length) {
+                    this.envelope.gain.setTargetAtTime(0, then, this.amplitudeGlide);
+                    this.stackDepletionTime = then;
+                    return;
+                }
+                const topVoice = this.stack[this.stack.length - 1];
+                this.generator.parameters.get("nat").setTargetAtTime(topVoice.nats, then, this.frequencyGlide);
                 this.envelope.gain.setTargetAtTime(0.5*topVoice.velocity, then, this.amplitudeGlide);
             } else {
                 this.stack.splice(this.stack.indexOf(voice), 1);

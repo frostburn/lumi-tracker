@@ -9,7 +9,7 @@ function _getTableValue(n, table) {
   return data[loopStart + n];
 }
 
-export default function getTableValue(x, table) {
+export function getTableValue(x, table) {
   let n = Math.floor(x);
   if (table.linear) {
     const mu = x - n;
@@ -18,4 +18,40 @@ export default function getTableValue(x, table) {
     return x0 + mu * (x1 - x0);
   }
   return _getTableValue(n, table);
+}
+
+export function parseTable(str) {
+  const tokens = str.replace("|", " | ").split(" ");
+  let lastToken = tokens.pop();
+  if (!lastToken.startsWith("/")) {
+    tokens.push(lastToken);
+    lastToken = "/100";
+  }
+
+  const linear = lastToken.endsWith("l");
+  if (linear) {
+    lastToken = lastToken.slice(0, -1);
+  }
+  const scale = parseInt(lastToken.slice(1));
+
+  const data = [];
+
+  let loopStart = Infinity;
+  let index = 0;
+
+  tokens.forEach(token => {
+    if (!token.length) {
+      return;
+    }
+    if (token === "|") {
+      loopStart = index;
+      return;
+    }
+    data.push(parseInt(token) / scale);
+    index++;
+  });
+
+  loopStart = Math.min(data.length - 1, loopStart);
+
+  return { linear, loopStart, data };
 }

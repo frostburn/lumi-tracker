@@ -1,5 +1,5 @@
 import JKISS31 from "../lib/jkiss.js";
-import getTableValue from "../lib/table.js";
+import { getTableValue } from "../lib/table.js";
 
 const EPSILON = 1e-6;
 
@@ -24,7 +24,6 @@ function normal() {
 
 class Finite {
   constructor(length, seed) {
-    console.log(length, seed);
     this.length = length;
     this.seed = seed;
     this.generator = new JKISS31(seed);

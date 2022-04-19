@@ -200,7 +200,7 @@ class Noise extends AudioWorkletProcessor {
       );
       const amplitude = getTableValue(x, this.tables.amplitude);
 
-      const dp = Math.min(1, frequency * dt);
+      const dp = frequency * dt;
       const dl = LEAK**dp;
 
       // TODO: Volume compensation for high frequencies or more accurate integration.

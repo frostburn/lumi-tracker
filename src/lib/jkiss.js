@@ -52,7 +52,7 @@ export default class JKISS31 {
     if (s === undefined) {
       return;
     }
-    s = (s * 1287649287) & INT32_MASK_FULL;
+    s = (s * 1287649287 + 777777) & INT32_MASK_FULL;
     this.x ^= s;
     s = (s*s) & INT32_MASK_FULL;
     this.y ^= s;

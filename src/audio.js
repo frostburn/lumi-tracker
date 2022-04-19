@@ -287,12 +287,12 @@ export class Noise {
         this.generator = new AudioWorkletNode(ctx, "noise");
         this.jitter = this.generator.parameters.get("jitter");
         this.jitter.setValueAtTime(0, ctx.currentTime);
-        this.generator.port.postMessage({ type: "preStages", value: preStages });
-        this.generator.port.postMessage({ type: "postStages", value: postStages });
-        this.generator.port.postMessage({ type: "model", value: model });
-        this.generator.port.postMessage({ type: "jitterModel", value: jitterModel });
-        this.generator.port.postMessage({ type: "jitterType", value: jitterType });
-        this.generator.port.postMessage({ type: "tableDelta", value: tableDelta });
+        this.setConfig({ type: "preStages", value: preStages });
+        this.setConfig({ type: "postStages", value: postStages });
+        this.setConfig({ type: "model", value: model });
+        this.setConfig({ type: "jitterModel", value: jitterModel });
+        this.setConfig({ type: "jitterType", value: jitterType });
+        this.setConfig({ type: "tableDelta", value: tableDelta });
         this._centsToNats = ctx.createGain();
         this._centsToNats.gain.setValueAtTime(Math.log(2)/1200, ctx.currentTime);
         this.pitchBend = ctx.createConstantSource();
@@ -313,6 +313,10 @@ export class Noise {
 
         this.stack = [];
         this.stackDepletionTime = -10000;
+    }
+
+    setConfig(config) {
+        this.generator.port.postMessage(config);
     }
 
     dispose() {

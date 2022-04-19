@@ -14,6 +14,10 @@ function rand() {
   return Math.random() * 2 - 1;
 }
 
+function triangular() {
+  return jkiss31.step01() - jkiss31.step01();
+}
+
 function normal() {
   return jkiss31.normal();
 }
@@ -91,13 +95,30 @@ class Noise extends AudioWorkletProcessor {
       },
     }
 
+    this.messages = [];
     this.port.onmessage = this.onMessage.bind(this);
   }
 
   onMessage(msg) {
+    const when = msg.data.when;
+    if (when === undefined) {
+      this.applyMessage(msg);
+    } else {
+      this.messages.push([when, msg]);
+      this.messages.sort((a, b) => a[0] - b[0]);
+    }
+  }
+
+  triggerMessages(t) {
+    while (this.messages.length && this.messages[0][0] <= t) {
+      const [when, msg] = this.messages.shift();
+      this.applyMessage(msg);
+    }
+  }
+
+  applyMessage(msg) {
     const data = msg.data;
     if (data.type === "onset") {
-      // TODO: Pre-scheduling
       this.tOnset = 0;
     } else if (data.type === "tableDelta") {
       this.tableDelta = data.value;
@@ -106,6 +127,8 @@ class Noise extends AudioWorkletProcessor {
     } else if (data.type === "model") {
       if (data.value === "jkiss") {
         this.model = jkiss;
+      } else if (data.value === "triangular") {
+        this.model = triangular;
       } else if (data.value === "normal") {
         this.model = normal;
       } else if (data.value === "finite") {
@@ -120,6 +143,8 @@ class Noise extends AudioWorkletProcessor {
     } else if (data.type === "jitterModel") {
       if (data.value === "jkiss") {
         this.jitterModel = jkiss;
+      } else if (data.value === "triangular") {
+        this.jitterModel = triangular;
       } else if (data.value === "normal") {
         this.jitterModel = normal;
       } else if (data.value === "finite") {
@@ -156,6 +181,7 @@ class Noise extends AudioWorkletProcessor {
   }
 
   process(inputs, outputs, parameters) {
+    let t = currentTime;
     const output = outputs[0];
 
     const natValues = parameters.nat;
@@ -165,6 +191,7 @@ class Noise extends AudioWorkletProcessor {
 
     const channel = output[0];
     for (let i = 0; i < channel.length; i++) {
+      this.triggerMessages(t);
       const x = this.tOnset / this.tableDelta;
 
       const frequency = Math.exp(
@@ -184,6 +211,7 @@ class Noise extends AudioWorkletProcessor {
 
       channel[i] = this.post[0];
 
+      t += dt;
       this.tOnset += dt;
       this.phase += dp;
       if (this.phase > 1) {

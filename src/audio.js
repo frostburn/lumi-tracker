@@ -279,7 +279,7 @@ export class Monophone {
 
 // TODO: Monophone super class
 export class Noise {
-    constructor(model="jkiss", jitterModel="jkiss", jitterType="pulseWidth", preStages=0, postStages=0, tableDelta=0.02, frequencyGlide=0.009, amplitudeGlide=0.005) {
+    constructor(model="jkiss", jitterModel="triangular", jitterType="pulseWidth", preStages=0, postStages=0, tableDelta=0.02, frequencyGlide=0.009, amplitudeGlide=0.005) {
         this.frequencyGlide = frequencyGlide;
         this.amplitudeGlide = amplitudeGlide;
         const ctx = getAudioContext();

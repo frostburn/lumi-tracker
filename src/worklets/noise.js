@@ -18,6 +18,25 @@ function normal() {
   return jkiss31.normal();
 }
 
+class Finite {
+  constructor(length, seed) {
+    console.log(length, seed);
+    this.length = length;
+    this.seed = seed;
+    this.generator = new JKISS31(seed);
+    this.index = 0;
+  }
+
+  step() {
+    if (this.index >= this.length) {
+      this.generator.seed(this.seed);
+      this.index = 0;
+    }
+    this.index++;
+    return this.generator.step01() * 2 - 1;
+  }
+}
+
 const LEAK = 0.9;
 
 class Noise extends AudioWorkletProcessor {
@@ -46,10 +65,12 @@ class Noise extends AudioWorkletProcessor {
     this.tableDelta = 0.02;
 
     this.model = rand;
+    this.jitterModel = rand;
 
     this.pre = [];
     this.post = [this.model()];
 
+    this.jitterType = "pitch";
     this.speed = 0;
 
     this.tables = {
@@ -87,9 +108,31 @@ class Noise extends AudioWorkletProcessor {
         this.model = jkiss;
       } else if (data.value === "normal") {
         this.model = normal;
+      } else if (data.value === "finite") {
+        this._generator = new Finite(data.length, data.seed);
+        this.model = () => this._generator.step();
+      } else if (data.value === "alternating") {
+        this._generator = -1
+        this.model = () => {this._generator = -this._generator; return this._generator};
       } else {
         this.model = rand;
       }
+    } else if (data.type === "jitterModel") {
+      if (data.value === "jkiss") {
+        this.jitterModel = jkiss;
+      } else if (data.value === "normal") {
+        this.jitterModel = normal;
+      } else if (data.value === "finite") {
+        this._jitterGenerator = new Finite(data.length, data.seed);
+        this.jitterModel = () => this._jitterGenerator.step();
+      } else if (data.value === "alternating") {
+        this._jitterGenerator = -1;
+        this.jitterModel = () => {this._jitterGenerator = -this._jitterGenerator; return this._jitterGenerator};
+      } else {
+        this.jitterModel = rand;
+      }
+    } else if (data.type === "jitterType") {
+      this.jitterType = data.value;
     } else if (data.type === "preStages") {
       this.pre = Array(data.value).fill(0);
       for (let i = 0; i < data.value; ++i) {
@@ -131,7 +174,7 @@ class Noise extends AudioWorkletProcessor {
       );
       const amplitude = getTableValue(x, this.tables.amplitude);
 
-      const dp = frequency * dt;
+      const dp = Math.min(1, frequency * dt);
       const dl = LEAK**dp;
 
       // TODO: Volume compensation for high frequencies or more accurate integration.
@@ -152,7 +195,10 @@ class Noise extends AudioWorkletProcessor {
           jitterValues[Math.min(jitterValues.length-1, i)] +
           getTableValue(x, this.tables.jitter)
         );
-        this.speed = jitter * this.model();
+        this.speed = jitter * this.jitterModel();
+        if (this.jitterType === "pulseWidth") {
+          this.speed = -Math.log(Math.max(0.01, 1 + this.speed));
+        }
       }
     }
 

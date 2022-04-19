@@ -6,7 +6,11 @@ const INT32_MASK_POSITIVE = 2147483647;
 const INVERSE_NORM = 1 / INT32_MASK_POSITIVE;
 
 export default class JKISS31 {
-  constructor() {
+  constructor(seed) {
+    this.seed(seed);
+  }
+
+  reset() {
     this.x = 123456789;
     this.y = 234567891;
     this.z = 345678912;
@@ -41,6 +45,19 @@ export default class JKISS31 {
     this.z = (Math.random() * INT32_MASK_FULL) & INT32_MASK_FULL;
     this.w = (Math.random() * INT32_MASK_FULL) & INT32_MASK_FULL;
     this.c = (Math.random() < 0.5) & 1;
+  }
+
+  seed(s) {
+    this.reset();
+    if (s === undefined) {
+      return;
+    }
+    s = (s * 1287649287) & INT32_MASK_FULL;
+    this.x ^= s;
+    s = (s*s) & INT32_MASK_FULL;
+    this.y ^= s;
+    s = (s*s) & INT32_MASK_FULL;
+    this.z ^= s;
   }
 
   step() {

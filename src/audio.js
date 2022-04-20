@@ -367,10 +367,12 @@ export class Noise {
     }
 
     setFullConfig(data) {
-      this.setConfig({type: "model", value: data.model});
-      this.frequencyGlide = data.frequencyGlide;
-      this.attack = data.attack;
-      this.release = data.release;
+        ["model", "jitterModel", "jitterType", "finiteLength", "finiteSeed", "jitterFiniteLength", "jitterFiniteSeed", "preStages", "postStages", "tableDelta"].forEach(type => {
+            this.setConfig({ type, value: data[type] });
+        });
+        this.frequencyGlide = data.frequencyGlide;
+        this.attack = data.attack;
+        this.release = data.release;
     }
 
     dispose() {

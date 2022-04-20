@@ -88,6 +88,7 @@ class Noise extends AudioWorkletProcessor {
     this.model = rand;
     this.jitterModel = rand;
 
+    // TODO: Attach permanent Finite and Balanced instances
     this.finiteLength = 8;
     this.finiteSeed = 0;
     this.jitterFiniteLength = 8;
@@ -190,12 +191,24 @@ class Noise extends AudioWorkletProcessor {
       this.jitterType = data.value;
     } else if (data.type === "finiteLength") {
       this.finiteLength = data.value;
+      if (this._generator instanceof Finite) {
+        this._generator.length = this.finiteLength;
+      }
     } else if (data.type === "finiteSeed") {
       this.finiteSeed = data.value;
+      if (this._generator instanceof Finite) {
+        this._generator.seed = this.finiteSeed;
+      }
     } else if (data.type === "jitterFiniteLength") {
       this.jitterFiniteLength = data.value;
+      if (this._jitterGenerator instanceof Finite) {
+        this._jitterGenerator.length = this.jitterFiniteLength;
+      }
     } else if (data.type === "jitterFiniteSeed") {
       this.jitterFiniteSeed = data.value;
+      if (this._jitterGenerator instanceof Finite) {
+        this._jitterGenerator.seed = this.jitterFiniteSeed;
+      }
     } else if (data.type === "preStages") {
       this.pre = Array(data.value).fill(0);
       for (let i = 0; i < data.value; ++i) {

@@ -81,10 +81,19 @@ export default {
         {
           instrument: {  // TODO: Rest of the parameters
             type: 'noise',
-            model: 'uniform',
             frequencyGlide: 10,
             attack: 10,
             release: 15,
+            model: 'uniform',
+            jitterModel: 'balanced',
+            jitterType: 'pulseWidth',
+            finiteLength: 8,
+            finiteSeed: 0,
+            jitterFiniteLength: 8,
+            jitterFiniteSeed: 0,
+            preStages: 0,
+            postStages: 0,
+            tableDelta: 20,
           },
           patterns: [
             Array(COLUMN_HEIGHT).fill(null),
@@ -114,10 +123,7 @@ export default {
           this.monophone.frequencyGlide = newValue.frequencyGlide / 1000;
           this.monophone.amplitudeGlide = newValue.amplitudeGlide / 1000;
         } else if (newValue.type === "noise") {
-          this.noise.setConfig({type: "model", value: newValue.model});
-          this.noise.frequencyGlide = newValue.frequencyGlide / 1000;
-          this.noise.attack = newValue.attack / 1000;
-          this.noise.release = newValue.release / 1000;
+          this.configureNoise(this.noise, newValue);
         }
       },
       deep: true,
@@ -259,6 +265,15 @@ export default {
         trackComponent.scrollIntoView(options);
       });
     },
+    configureNoise(noise, instrument) {
+      const data = {};
+      Object.assign(data, instrument);
+      data.frequencyGlide /= 1000;
+      data.attack /= 1000;
+      data.release /= 1000;
+      data.tableDelta /= 1000;
+      noise.setFullConfig(data);
+    },
     play(extent) {
       this.cancelPlay();
       suspendAudio();
@@ -283,12 +298,7 @@ export default {
           this.cancelCallbacks.push(playFrequencies(cells, instrument, this.beatDuration));
         } else if (track.instrument.type === "noise") {
           const instrument = new Noise();
-          const data = {};
-          Object.assign(data, track.instrument);
-          data.frequencyGlide /= 1000;
-          data.attack /= 1000;
-          data.release /= 1000;
-          instrument.setFullConfig(data);
+          this.configureNoise(instrument, track.instrument);
 
           let time = now;
           cells.forEach(cell => {

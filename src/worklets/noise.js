@@ -121,6 +121,8 @@ class Noise extends AudioWorkletProcessor {
       this.tOnset = 0;
     } else if (data.type === "tableDelta") {
       this.tableDelta = data.value;
+    } else if (data.type === "tables") {
+      this.tables = data.value;
     } else if (data.type === "table") {
       this.tables[data.subtype] = data.value;
     } else if (data.type === "model") {
@@ -208,7 +210,7 @@ class Noise extends AudioWorkletProcessor {
         this.post[j] = this.post[j] * dl + this.post[j+1] * dp;
       }
 
-      channel[i] = this.post[0];
+      channel[i] = this.post[0] * amplitude;
 
       t += dt;
       this.tOnset += dt;

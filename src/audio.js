@@ -279,7 +279,7 @@ export class Monophone {
 
 // TODO: Monophone super class
 export class Noise {
-    constructor(model="jkiss", jitterModel="triangular", jitterType="pulseWidth", preStages=0, postStages=0, tableDelta=0.02, frequencyGlide=0.009, amplitudeGlide=0.005) {
+    constructor(model="jkiss", jitterModel="triangular", jitterType="pulseWidth", preStages=0, postStages=0, tableDelta=0.02, frequencyGlide=0.001, amplitudeGlide=0.001) {
         this.frequencyGlide = frequencyGlide;
         this.amplitudeGlide = amplitudeGlide;
         const ctx = getAudioContext();
@@ -319,6 +319,14 @@ export class Noise {
         this.generator.port.postMessage(config);
     }
 
+    setInstrument(instrument, when) {
+        this.setConfig({
+            type: "tables",
+            value: instrument,
+            when,
+        });
+    }
+
     dispose() {
         disposeOscillator(this.vibratoOscillator);
         this.pitchBend.disconnect();
@@ -329,6 +337,7 @@ export class Noise {
         const nats = Math.log(frequency);
         const ctx = getAudioContext();
         const now = safeNow();
+        this.setConfig({type: "onset", when: now});
         this.envelope.gain.cancelScheduledValues(now);
         this.envelope.gain.setTargetAtTime(0.5*velocity, now, this.amplitudeGlide);
         if (this.stack.length) {

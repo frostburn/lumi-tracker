@@ -70,6 +70,11 @@ class Noise extends AudioWorkletProcessor {
     this.model = rand;
     this.jitterModel = rand;
 
+    this.finiteLength = 8;
+    this.finiteSeed = 0;
+    this.jitterFiniteLength = 8;
+    this.jitterFiniteSeed = 0;
+
     this.pre = [];
     this.post = [this.model()];
 
@@ -133,7 +138,7 @@ class Noise extends AudioWorkletProcessor {
       } else if (data.value === "normal") {
         this.model = normal;
       } else if (data.value === "finite") {
-        this._generator = new Finite(data.length, data.seed);
+        this._generator = new Finite(this.finiteLength, this.finiteSeed);
         this.model = () => this._generator.step();
       } else if (data.value === "alternating") {
         this._generator = -1
@@ -149,7 +154,7 @@ class Noise extends AudioWorkletProcessor {
       } else if (data.value === "normal") {
         this.jitterModel = normal;
       } else if (data.value === "finite") {
-        this._jitterGenerator = new Finite(data.length, data.seed);
+        this._jitterGenerator = new Finite(this.jitterFiniteLength, this.jitterFiniteSeed);
         this.jitterModel = () => this._jitterGenerator.step();
       } else if (data.value === "alternating") {
         this._jitterGenerator = -1;
@@ -159,6 +164,14 @@ class Noise extends AudioWorkletProcessor {
       }
     } else if (data.type === "jitterType") {
       this.jitterType = data.value;
+    } else if (data.type === "finiteLength") {
+      this.finiteLength = data.value;
+    } else if (data.type === "finiteSeed") {
+      this.finiteSeed = data.value;
+    } else if (data.type === "jitterFiniteLength") {
+      this.jitterFiniteLength = data.value;
+    } else if (data.type === "jitterFiniteSeed") {
+      this.jitterFiniteSeed = data.value;
     } else if (data.type === "preStages") {
       this.pre = Array(data.value).fill(0);
       for (let i = 0; i < data.value; ++i) {
@@ -166,6 +179,8 @@ class Noise extends AudioWorkletProcessor {
       }
     } else if (data.type === "postStages") {
       this.post = Array(data.value+1).fill(0);
+    } else {
+      throw `Unrecognized message ${data.type}`;
     }
   }
 

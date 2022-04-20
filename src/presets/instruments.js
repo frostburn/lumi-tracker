@@ -1,6 +1,20 @@
 // TODO: Unify: jitter = timbre, nats -> cents
 
 const INSTRUMENTS = {
+    P0: {  // Default
+        amplitude: {
+            linear: false,
+            data: [100],
+        },
+        jitter: {
+            linear: false,
+            data: [0],
+        },
+        nat: {
+            linear: false,
+            data: [0],
+        },
+    },
     PS: { // Noise - Snare
         amplitude: {
             data: [100, 90, 50, 20, 15, 20, 10, 5, 3, 2, 1, 0],

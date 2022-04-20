@@ -1,4 +1,5 @@
 import { ratioToCents } from "./util.js";
+import INSTRUMENTS from "./presets/instruments.js";
 
 let AUDIO_CTX;
 // WebAudio API especially on Firefox doesn't perfectly sync AUDIO_CTX.currentTime
@@ -8,6 +9,8 @@ let AUDIO_DELAY = 0.0;
 // WebAudio API seems to have a bug where oscillators are not garbage collected.
 // Use a banking system to reuse oscillators as much as possible.
 const OSCILLATOR_BANK = [];
+// Not sure about AudioWorkletNode either so let's play it safe and bank them as well.
+const NOISE_BANK = [];
 
 const DEFAULT_WAVEFORMS = ["sine", "square", "sawtooth", "triangle"];
 const PERIODIC_WAVES = {};
@@ -16,6 +19,10 @@ export function availableWaveforms() {
     const result = Object.keys(PERIODIC_WAVES).concat(DEFAULT_WAVEFORMS);
     result.sort();
     return result;
+}
+
+export function availableNoiseModels() {
+    return ["jkiss", "triangular", "normal", "finite", "alternating", "built-in"];
 }
 
 export function setWaveform(oscillator, waveform) {
@@ -79,6 +86,42 @@ function disposeOscillator(oscillator) {
     oscillator.detune.cancelScheduledValues(ctx.currentTime);
     oscillator.disconnect();
     OSCILLATOR_BANK.push(oscillator);
+}
+
+function obtainNoise(
+        model="jkiss", jitterModel="triangular", jitterType="pulseWidth",
+        finiteLength=8, finiteSeed=0, jitterFiniteLength=8, jitterFiniteSeed=0,
+        preStages=0, postStages=0, tableDelta=0.02, tables=INSTRUMENTS.P0,
+    ) {
+    const ctx = getAudioContext();
+    let noise;
+    if (NOISE_BANK.length) {
+        noise = NOISE_BANK.pop();
+    } else {
+        noise = new AudioWorkletNode(ctx, "noise");
+    }
+    noise.parameters.get("jitter").setValueAtTime(0, ctx.currentTime);
+    noise.port.postMessage({ type: "model", value: model });
+    noise.port.postMessage({ type: "jitterModel", value: jitterModel });
+    noise.port.postMessage({ type: "jitterType", value: jitterType });
+    noise.port.postMessage({ type: "finiteLength", value: finiteLength });
+    noise.port.postMessage({ type: "finiteSeed", value: finiteSeed });
+    noise.port.postMessage({ type: "jitterFiniteLength", value: jitterFiniteLength });
+    noise.port.postMessage({ type: "jitterFiniteSeed", value: jitterFiniteSeed });
+    noise.port.postMessage({ type: "preStages", value: preStages });
+    noise.port.postMessage({ type: "postStages", value: postStages });
+    noise.port.postMessage({ type: "tableDelta", value: tableDelta });
+    noise.port.postMessage({ type: "tables", value: tables });
+
+    return noise;
+}
+
+function disposeNoise(noise) {
+    const ctx = getAudioContext();
+    noise.parameters.get("nat").cancelScheduledValues(ctx.currentTime);
+    noise.parameters.get("jitter").cancelScheduledValues(ctx.currentTime);
+    noise.disconnect();
+    NOISE_BANK.push(noise);
 }
 
 export function scheduleAction(when, action) {
@@ -279,20 +322,11 @@ export class Monophone {
 
 // TODO: Monophone super class
 export class Noise {
-    constructor(model="jkiss", jitterModel="triangular", jitterType="pulseWidth", preStages=0, postStages=0, tableDelta=0.02, frequencyGlide=0.001, amplitudeGlide=0.001) {
+    constructor(frequencyGlide=0.001, amplitudeGlide=0.001) {
         this.frequencyGlide = frequencyGlide;
         this.amplitudeGlide = amplitudeGlide;
         const ctx = getAudioContext();
-        // TODO: Noise bank
-        this.generator = new AudioWorkletNode(ctx, "noise");
-        this.jitter = this.generator.parameters.get("jitter");
-        this.jitter.setValueAtTime(0, ctx.currentTime);
-        this.setConfig({ type: "preStages", value: preStages });
-        this.setConfig({ type: "postStages", value: postStages });
-        this.setConfig({ type: "model", value: model });
-        this.setConfig({ type: "jitterModel", value: jitterModel });
-        this.setConfig({ type: "jitterType", value: jitterType });
-        this.setConfig({ type: "tableDelta", value: tableDelta });
+        this.generator = obtainNoise();
         this._centsToNats = ctx.createGain();
         this._centsToNats.gain.setValueAtTime(Math.log(2)/1200, ctx.currentTime);
         this.pitchBend = ctx.createConstantSource();
@@ -328,6 +362,7 @@ export class Noise {
     }
 
     dispose() {
+        disposeNoise(this.noise);
         disposeOscillator(this.vibratoOscillator);
         this.pitchBend.disconnect();
         this.pitchBend.stop();

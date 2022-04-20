@@ -20,8 +20,16 @@ export default {
           <div class="modal-body">
             <label for="frequency-glide">Frequency glide: </label>
             <input id="frequency-glide" type="number" v-model="instrument.frequencyGlide" />
-            <label for="amplitude-glide"> Amplitude glide: </label>
-            <input id="amplitude-glide" type="number" v-model="instrument.amplitudeGlide" />
+            <template v-if="instrument.type === 'monophone'">
+              <label for="amplitude-glide"> Amplitude glide: </label>
+              <input id="amplitude-glide" type="number" v-model="instrument.amplitudeGlide" />
+            </template>
+            <template v-if="instrument.type === 'noise'">
+              <label for="attack"> Attack: </label>
+              <input id="attack" type="number" v-model="instrument.attack" />
+              <label for="release"> Release: </label>
+              <input id="release" type="number" v-model="instrument.release" />
+            </template>
           </div>
 
           <div class="modal-footer">

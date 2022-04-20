@@ -322,11 +322,13 @@ export class Monophone {
 
 // TODO: Monophone super class
 export class Noise {
-    constructor(frequencyGlide=0.001, amplitudeGlide=0.001) {
+    constructor(frequencyGlide=0.001, attack=0.001, release=0.001) {
         this.frequencyGlide = frequencyGlide;
-        this.amplitudeGlide = amplitudeGlide;
+        this.attack = attack;
+        this.release = release;
         const ctx = getAudioContext();
         this.generator = obtainNoise();
+        this.jitter = this.generator.parameters.get("jitter");
         this._centsToNats = ctx.createGain();
         this._centsToNats.gain.setValueAtTime(Math.log(2)/1200, ctx.currentTime);
         this.pitchBend = ctx.createConstantSource();
@@ -362,24 +364,25 @@ export class Noise {
     }
 
     dispose() {
-        disposeNoise(this.noise);
+        disposeNoise(this.generator);
         disposeOscillator(this.vibratoOscillator);
         this.pitchBend.disconnect();
         this.pitchBend.stop();
     }
 
     noteOn(frequency, velocity) {
+        velocity *= 0.5;  // TODO: Global gain
         const nats = Math.log(frequency);
         const ctx = getAudioContext();
         const now = safeNow();
         this.setConfig({type: "onset", when: now});
         this.envelope.gain.cancelScheduledValues(now);
-        this.envelope.gain.setTargetAtTime(0.5*velocity, now, this.amplitudeGlide);
+        this.envelope.gain.setTargetAtTime(velocity, now, this.attack);
         if (this.stack.length) {
             this.generator.parameters.get("nat").setTargetAtTime(nats, now, this.frequencyGlide);
         } else {
             const decayDuration = now - this.stackDepletionTime;
-            const releaseDuration = this.amplitudeGlide * 1.75;
+            const releaseDuration = this.release * 1.75;
             if (decayDuration < releaseDuration) {
                 this.generator.parameters.get("nat").setTargetAtTime(
                     nats,
@@ -398,18 +401,18 @@ export class Noise {
             const then = safeNow();
             if (!this.stack.length) {
                 console.warn("Note off with an empty stack");
-                this.envelope.gain.setTargetAtTime(0, then, this.amplitudeGlide);
+                this.envelope.gain.setTargetAtTime(0, then, this.release);
             }
             if (this.stack[this.stack.length - 1].id === id) {
                 this.stack.pop();
                 if (!this.stack.length) {
-                    this.envelope.gain.setTargetAtTime(0, then, this.amplitudeGlide);
+                    this.envelope.gain.setTargetAtTime(0, then, this.release);
                     this.stackDepletionTime = then;
                     return;
                 }
                 const topVoice = this.stack[this.stack.length - 1];
                 this.generator.parameters.get("nat").setTargetAtTime(topVoice.nats, then, this.frequencyGlide);
-                this.envelope.gain.setTargetAtTime(0.5*topVoice.velocity, then, this.amplitudeGlide);
+                this.envelope.gain.setTargetAtTime(topVoice.velocity, then, this.attack);
             } else {
                 this.stack.splice(this.stack.indexOf(voice), 1);
             }

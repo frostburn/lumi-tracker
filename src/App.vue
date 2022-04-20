@@ -10,9 +10,10 @@ import InstrumentModal from "./components/InstrumentModal.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, REFERENCE_OCTAVE, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, setAudioDelay } from "./audio.js";
-import { Monophone, availableWaveforms, setWaveform, loadAudioWorklets, Noise } from "./audio.js";
+import { Monophone, availableWaveforms, setWaveform, loadAudioWorklets, Noise, availableNoiseModels } from "./audio.js";
 import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
+import INSTRUMENTS from "./presets/instruments.js";
 
 const COLUMN_HEIGHT = 64;
 
@@ -28,7 +29,8 @@ export default {
   },
   data() {
     return {
-      instrument: new Monophone("oddtheta3", 0.01, 0.02),
+      monophone: new Monophone("oddtheta3", 0.01, 0.02),
+      noise: null,  // Can only be initialized on mounting
       activeInstrument: null,
       computerKeyboard: null,
       computerNoteOffCallbacks: new Map(),
@@ -51,7 +53,7 @@ export default {
       pitchBendMonzo: [1, 0],
       baseFrequency: REFERENCE_FREQUENCY,
       beatsPerMinute: 480,
-      audioDelay: 5,
+      audioDelay: 1,
       playing: false,
       activeRow: null,
       activeColumn: null,
@@ -66,7 +68,7 @@ export default {
       tracks: [
         {
           instrument: {
-            monophonic: true,
+            type: 'monophone',
             waveform: 'oddtheta3',
             frequencyGlide: 10,
             amplitudeGlide: 20,
@@ -77,11 +79,12 @@ export default {
           ],
         },
         {
-          instrument: {
-            monophonic: true,
-            waveform: 'triangle',
-            frequencyGlide: 50,
-            amplitudeGlide: 50,
+          instrument: {  // TODO: Rest of the parameters
+            type: 'noise',
+            model: 'jkiss',
+            frequencyGlide: 10,
+            attack: 10,
+            release: 15,
           },
           patterns: [
             Array(COLUMN_HEIGHT).fill(null),
@@ -106,9 +109,16 @@ export default {
     },
     activeInstrument: {
       handler(newValue) {
-        setWaveform(this.instrument.oscillator, this.activeInstrument.waveform);
-        this.instrument.frequencyGlide = this.activeInstrument.frequencyGlide / 1000;
-        this.instrument.amplitudeGlide = this.activeInstrument.amplitudeGlide / 1000;
+        if (newValue.type === 'monophone') {
+          setWaveform(this.monophone.oscillator, newValue.waveform);
+          this.monophone.frequencyGlide = newValue.frequencyGlide / 1000;
+          this.monophone.amplitudeGlide = newValue.amplitudeGlide / 1000;
+        } else if (newValue.type === "noise") {
+          this.noise.setConfig({type: "model", value: newValue.model});
+          this.noise.frequencyGlide = newValue.frequencyGlide / 1000;
+          this.noise.attack = newValue.attack / 1000;
+          this.noise.release = newValue.release / 1000;
+        }
       },
       deep: true,
     },
@@ -201,6 +211,9 @@ export default {
     waveforms() {
       return availableWaveforms();
     },
+    noiseModels() {
+      return availableNoiseModels();
+    },
   },
   methods: {
     cellsToFrequencies(cells) {
@@ -244,6 +257,7 @@ export default {
       });
     },
     play(extent) {
+      // TODO: Implement track playing for Noise
       this.cancelPlay();
       suspendAudio();
       this.tracks.forEach((track, i) => {
@@ -332,7 +346,11 @@ export default {
       monzo[1] += this.countS * octave;
       if (this.inputMode === null) {
         const frequency = this.baseFrequency * Math.exp(this.natsL * monzo[0] + this.natsS * monzo[1]);
-        return this.instrument.noteOn(frequency, velocity / 0xFF);
+        if (this.activeInstrument.type === "monophone") {
+          return this.monophone.noteOn(frequency, velocity / 0xFF);
+        } else {
+          return this.noise.noteOn(frequency, velocity / 0xFF);
+        }
       } else if (this.inputMode === "note" && this.activeRow !== null) {
         if (this.activeRow >= 0 && this.activeRow < this.columnHeight) {
           this.activeCells[this.activeRow] = { monzo, velocity };
@@ -396,14 +414,16 @@ export default {
 
       function pitchBend(e) {
         const ctx = getAudioContext();
-        this.instrument.detune.setTargetAtTime(this.pitchBendDepth * e.value, ctx.currentTime, 0.0001);
+        this.monophone.detune.setTargetAtTime(this.pitchBendDepth * e.value, ctx.currentTime, 0.0001);
+        this.noise.detune.setTargetAtTime(this.pitchBendDepth * e.value, ctx.currentTime, 0.0001);
       }
       this.midiInput.addListener("pitchbend", pitchBend.bind(this));
 
       function controlChange(e) {
         const ctx = getAudioContext();
         if (e.subtype === "modulationwheelcoarse") {
-          this.instrument.vibratoDepth.setTargetAtTime(100 * e.value, ctx.currentTime, 0.005);
+          this.monophone.vibratoDepth.setTargetAtTime(100 * e.value, ctx.currentTime, 0.005);
+          this.noise.jitter.setTargetAtTime(e.value * 0.75, ctx.currentTime, 0.005);
         }
       }
       this.midiInput.addListener("controlchange", controlChange.bind(this));
@@ -699,12 +719,14 @@ export default {
       this.midiInputs = WebMidi.inputs;
     }
     await loadAudioWorklets();
+    this.noise = new Noise();
   },
   unmounted() {
     this.computerKeyboard.removeEventListener("keydown", this.computerKeydown);
     this.computerKeyboard.removeEventListener("keyup", this.computerKeyup);
     this.computerKeyboard.dispose();
-    this.instrument.dispose();
+    this.monophone.dispose();
+    this.noise.dispose();
     window.removeEventListener("mouseup", this.onMouseUp);
     window.removeEventListener("click", this.selectNothing);
     window.removeEventListener("keydown", this.windowKeydown);
@@ -775,8 +797,11 @@ export default {
   <table>
     <tr>
       <th v-for="track of tracks">
-        <select v-model="track.instrument.waveform" @focus="activeInstrument = track.instrument">
+        <select v-model="track.instrument.waveform" @focus="activeInstrument = track.instrument" v-if="track.instrument.type === 'monophone'">
           <option v-for="waveform of waveforms">{{ waveform }}</option>
+        </select>
+        <select v-model="track.instrument.model" @focus="activeInstrument = track.instrument" v-if="track.instrument.type === 'noise'">
+          <option v-for="model of noiseModels">{{ model }}</option>
         </select>
         <span class="instrument-config" @click="openInstrumentModal(track.instrument)">⚙</span>
       </th>

@@ -9,7 +9,7 @@ import EdoModal from "./components/EdoModal.vue";
 import InstrumentModal from "./components/InstrumentModal.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, REFERENCE_OCTAVE, ratioToCents } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
-import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, setAudioDelay } from "./audio.js";
+import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, setAudioDelay, safeNow } from "./audio.js";
 import { Monophone, availableWaveforms, setWaveform, loadAudioWorklets, Noise, availableNoiseModels } from "./audio.js";
 import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
@@ -81,7 +81,7 @@ export default {
         {
           instrument: {  // TODO: Rest of the parameters
             type: 'noise',
-            model: 'jkiss',
+            model: 'uniform',
             frequencyGlide: 10,
             attack: 10,
             release: 15,
@@ -216,6 +216,10 @@ export default {
     },
   },
   methods: {
+    cellFrequency(cell) {
+      const step = this.l * cell.monzo[0] + this.s * cell.monzo[1];
+      return this.baseFrequency * this.equave ** (step / this.divisions);
+    },
     cellsToFrequencies(cells) {
       let frequency = null;
       let velocity = 0.0;
@@ -224,8 +228,7 @@ export default {
           frequency = null;
           velocity = 0;
         } else if (cell !== null) {
-          const step = this.l * cell.monzo[0] + this.s * cell.monzo[1];
-          frequency = this.baseFrequency * this.equave ** (step / this.divisions);
+          const frequency = this.cellFrequency(cell);
           velocity = cell.velocity / 0xFF;
         }
         return {frequency, velocity};
@@ -257,9 +260,9 @@ export default {
       });
     },
     play(extent) {
-      // TODO: Implement track playing for Noise
       this.cancelPlay();
       suspendAudio();
+      const now = safeNow();
       this.tracks.forEach((track, i) => {
         let cells = [];
         if (extent === "frame") {
@@ -269,13 +272,36 @@ export default {
             cells = cells.concat(track.patterns[frame[i]]);
           });
         }
-        cells = this.cellsToFrequencies(cells);
-        const instrument = {
-          waveform: track.instrument.waveform,
-          frequencyGlide: track.instrument.frequencyGlide / 1000,
-          amplitudeGlide: track.instrument.amplitudeGlide / 1000,
-        };
-        this.cancelCallbacks.push(playFrequencies(cells, instrument, this.beatDuration));
+        if (track.instrument.type === "monophone") {
+          // TODO: Use the Monophone class
+          cells = this.cellsToFrequencies(cells);
+          const instrument = {
+            waveform: track.instrument.waveform,
+            frequencyGlide: track.instrument.frequencyGlide / 1000,
+            amplitudeGlide: track.instrument.amplitudeGlide / 1000,
+          };
+          this.cancelCallbacks.push(playFrequencies(cells, instrument, this.beatDuration));
+        } else if (track.instrument.type === "noise") {
+          const instrument = new Noise();
+          const data = {};
+          Object.assign(data, track.instrument);
+          data.frequencyGlide /= 1000;
+          data.attack /= 1000;
+          data.release /= 1000;
+          instrument.setFullConfig(data);
+
+          let time = now;
+          cells.forEach(cell => {
+            if (cell === NOTE_OFF) {
+              instrument.trackNoteOff(time);
+            }else if (cell !== null) {
+              instrument.trackNoteOn(this.cellFrequency(cell), cell.velocity / 0xFF, time);
+            }
+            time += this.beatDuration;
+          });
+
+          this.cancelCallbacks.push(instrument.dispose.bind(instrument));
+        }
       });
       this.playing = true;
 

@@ -22,7 +22,7 @@ export function availableWaveforms() {
 }
 
 export function availableNoiseModels() {
-    return ["jkiss", "triangular", "normal", "finite", "alternating", "built-in"];
+    return ["uniform", "triangular", "normal", "finite", "alternating", "built-in"];
 }
 
 export function setWaveform(oscillator, waveform) {
@@ -349,6 +349,9 @@ export class Noise {
 
         this.stack = [];
         this.stackDepletionTime = -10000;
+
+        this.trackPlaying = false;
+        this.lastTrackTime = -10000;
     }
 
     setConfig(config) {
@@ -363,11 +366,47 @@ export class Noise {
         });
     }
 
+    setFullConfig(data) {
+      this.setConfig({type: "model", value: data.model});
+      this.frequencyGlide = data.frequencyGlide;
+      this.attack = data.attack;
+      this.release = data.release;
+    }
+
     dispose() {
         disposeNoise(this.generator);
         disposeOscillator(this.vibratoOscillator);
         this.pitchBend.disconnect();
         this.pitchBend.stop();
+        this.envelope.disconnect();
+    }
+
+    trackNoteOn(frequency, velocity, when) {
+        if (when < this.lastTrackTime) {
+            throw "Causality error during tracking";
+        }
+        this.lastTrackTime = when;
+
+        velocity *= 0.5; // TODO: Global gain
+        const nats = Math.log(frequency);
+        this.setConfig({type: "onset", when});
+        this.envelope.gain.setTargetAtTime(velocity, when, this.attack);
+        if (this.trackPlaying) {
+            this.generator.parameters.get("nat").setTargetAtTime(nats, when, this.frequencyGlide);
+        } else {
+            this.generator.parameters.get("nat").setValueAtTime(nats, when);
+            this.trackPlaying = true;
+        }
+    }
+
+    trackNoteOff(when) {
+        if (when < this.lastTrackTime) {
+            throw "Causality error during tracking";
+        }
+        this.lastTrackTime = when;
+
+        this.envelope.gain.setTargetAtTime(0, when, this.release);
+        this.trackPlaying = false;
     }
 
     noteOn(frequency, velocity) {

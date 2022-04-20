@@ -6,7 +6,7 @@ const EPSILON = 1e-6;
 const jkiss31 = new JKISS31();
 jkiss31.scramble();
 
-function jkiss() {
+function uniform() {
   return jkiss31.step01() * 2 - 1;
 }
 
@@ -131,8 +131,8 @@ class Noise extends AudioWorkletProcessor {
     } else if (data.type === "table") {
       this.tables[data.subtype] = data.value;
     } else if (data.type === "model") {
-      if (data.value === "jkiss") {
-        this.model = jkiss;
+      if (data.value === "uniform") {
+        this.model = uniform;
       } else if (data.value === "triangular") {
         this.model = triangular;
       } else if (data.value === "normal") {
@@ -147,8 +147,8 @@ class Noise extends AudioWorkletProcessor {
         this.model = rand;
       }
     } else if (data.type === "jitterModel") {
-      if (data.value === "jkiss") {
-        this.jitterModel = jkiss;
+      if (data.value === "uniform") {
+        this.jitterModel = uniform;
       } else if (data.value === "triangular") {
         this.jitterModel = triangular;
       } else if (data.value === "normal") {

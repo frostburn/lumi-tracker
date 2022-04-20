@@ -22,6 +22,24 @@ function normal() {
   return jkiss31.normal();
 }
 
+class Balanced {
+  constructor() {
+    this.generator = new JKISS31();
+    this.generator.scramble();
+    this.last = null;
+  }
+
+  step() {
+    if (this.last === null) {
+      this.last = this.generator.step01() * 2 - 1;
+      return this.last;
+    }
+    const result = -this.last;
+    this.last = null;
+    return result;
+  }
+}
+
 class Finite {
   constructor(length, seed) {
     this.length = length;
@@ -137,9 +155,12 @@ class Noise extends AudioWorkletProcessor {
         this.model = triangular;
       } else if (data.value === "normal") {
         this.model = normal;
+      } else if (data.value === "balanced") {
+        this._generator = new Balanced();
+        this.model = this._generator.step.bind(this._generator);
       } else if (data.value === "finite") {
         this._generator = new Finite(this.finiteLength, this.finiteSeed);
-        this.model = () => this._generator.step();
+        this.model = this._generator.step.bind(this._generator);
       } else if (data.value === "alternating") {
         this._generator = -1
         this.model = () => {this._generator = -this._generator; return this._generator};
@@ -153,9 +174,12 @@ class Noise extends AudioWorkletProcessor {
         this.jitterModel = triangular;
       } else if (data.value === "normal") {
         this.jitterModel = normal;
+      } else if (data.value === "balanced") {
+        this._jitterGenerator = new Balanced();
+        this.jitterModel = this._jitterGenerator.step.bind(this._jitterGenerator);
       } else if (data.value === "finite") {
         this._jitterGenerator = new Finite(this.jitterFiniteLength, this.jitterFiniteSeed);
-        this.jitterModel = () => this._jitterGenerator.step();
+        this.jitterModel = this._jitterGenerator.step.bind(this._jitterGenerator);
       } else if (data.value === "alternating") {
         this._jitterGenerator = -1;
         this.jitterModel = () => {this._jitterGenerator = -this._jitterGenerator; return this._jitterGenerator};

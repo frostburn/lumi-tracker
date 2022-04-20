@@ -22,7 +22,7 @@ export function availableWaveforms() {
 }
 
 export function availableNoiseModels() {
-    return ["uniform", "triangular", "normal", "finite", "alternating", "built-in"];
+    return ["uniform", "triangular", "normal", "balanced", "finite", "alternating", "built-in"];
 }
 
 export function setWaveform(oscillator, waveform) {
@@ -89,7 +89,7 @@ function disposeOscillator(oscillator) {
 }
 
 function obtainNoise(
-        model="jkiss", jitterModel="triangular", jitterType="pulseWidth",
+        model="uniform", jitterModel="balanced", jitterType="pulseWidth",
         finiteLength=8, finiteSeed=0, jitterFiniteLength=8, jitterFiniteSeed=0,
         preStages=0, postStages=0, tableDelta=0.02, tables=INSTRUMENTS.P0,
     ) {

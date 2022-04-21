@@ -47,10 +47,14 @@ export default {
               <input type="radio" id="pitch" value="pitch" v-model="instrument.jitterType" />
               <label for="pitch">Pitch</label>
 
+              <label for="bit-depth"> Bit Depth: </label>
+              <input id="bit-depth" type="number" min="1" max="31" v-model="instrument.bitDepth" />
               <label for="finite-length"> Finite Length: </label>
               <input id="finite-length" type="number" min="1" v-model="instrument.finiteLength" />
               <label for="finite-seed"> Finite Seed: </label>
               <input id="finite-seed" type="number" v-model="instrument.finiteSeed" />
+              <label for="jitter-bit-depth"> Jitter Bit Depth: </label>
+              <input id="jitter-bit-depth" type="number" min="1" max="31" v-model="instrument.jitterBitDepth" />
               <label for="jitter-finite-length"> Jitter Finite Length: </label>
               <input id="jitter-finite-length" type="number" min="1" v-model="instrument.jitterFiniteLength" />
               <label for="jitter-finite-seed"> Jitter Finite Seed: </label>

@@ -22,7 +22,7 @@ export function availableWaveforms() {
 }
 
 export function availableNoiseModels() {
-    return ["uniform", "triangular", "normal", "balanced", "finite", "alternating", "built-in"];
+    return ["uniform", "triangular", "normal", "balanced", "bit", "finite", "alternating", "built-in"];
 }
 
 export function setWaveform(oscillator, waveform) {
@@ -90,7 +90,8 @@ function disposeOscillator(oscillator) {
 
 function obtainNoise(
         model="uniform", jitterModel="balanced", jitterType="pulseWidth",
-        finiteLength=8, finiteSeed=0, jitterFiniteLength=8, jitterFiniteSeed=0,
+        bitDepth=1, finiteLength=8, finiteSeed=0,
+        jitterBitDepth=1, jitterFiniteLength=8, jitterFiniteSeed=0,
         preStages=0, postStages=0, tableDelta=0.02, tables=INSTRUMENTS.P0,
     ) {
     const ctx = getAudioContext();
@@ -104,8 +105,10 @@ function obtainNoise(
     noise.port.postMessage({ type: "model", value: model });
     noise.port.postMessage({ type: "jitterModel", value: jitterModel });
     noise.port.postMessage({ type: "jitterType", value: jitterType });
+    noise.port.postMessage({ type: "bitDepth", value: bitDepth });
     noise.port.postMessage({ type: "finiteLength", value: finiteLength });
     noise.port.postMessage({ type: "finiteSeed", value: finiteSeed });
+    noise.port.postMessage({ type: "jitterBitDepth", value: jitterBitDepth });
     noise.port.postMessage({ type: "jitterFiniteLength", value: jitterFiniteLength });
     noise.port.postMessage({ type: "jitterFiniteSeed", value: jitterFiniteSeed });
     noise.port.postMessage({ type: "preStages", value: preStages });
@@ -367,7 +370,7 @@ export class Noise {
     }
 
     setFullConfig(data) {
-        ["model", "jitterModel", "jitterType", "finiteLength", "finiteSeed", "jitterFiniteLength", "jitterFiniteSeed", "preStages", "postStages", "tableDelta"].forEach(type => {
+        ["model", "jitterModel", "jitterType", "bitDepth", "finiteLength", "finiteSeed", "jitterBitDepth", "jitterFiniteLength", "jitterFiniteSeed", "preStages", "postStages", "tableDelta"].forEach(type => {
             this.setConfig({ type, value: data[type] });
         });
         this.frequencyGlide = data.frequencyGlide;

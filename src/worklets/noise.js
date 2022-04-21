@@ -58,6 +58,37 @@ class Finite {
   }
 }
 
+class Bit {
+  constructor(depth) {
+    this.depth = depth;
+    this.generator = new JKISS31();
+    this.generator.scramble();
+    this.value = this.generator.step();
+    this.remaining = 31;
+  }
+
+  set depth(value) {
+    this._depth = value;
+    this.mask = (1 << value) - 1;
+  }
+
+  get depth() {
+    return this._depth;
+  }
+
+  step() {
+    const result = this.value & this.mask;
+    this.remaining -= this.depth;
+    if (this.remaining < this.depth) {
+      this.value = this.generator.step();
+      this.remaining = 31;
+    } else {
+      this.value >>= this.depth;
+    }
+    return (result / this.mask) * 2 - 1;
+  }
+}
+
 const LEAK = 0.9;
 
 class Noise extends AudioWorkletProcessor {
@@ -88,11 +119,15 @@ class Noise extends AudioWorkletProcessor {
     this.model = rand;
     this.jitterModel = rand;
 
-    // TODO: Attach permanent Finite and Balanced instances
-    this.finiteLength = 8;
-    this.finiteSeed = 0;
-    this.jitterFiniteLength = 8;
-    this.jitterFiniteSeed = 0;
+    this.finite = new Finite();
+    this.balanced = new Balanced();
+    this.bit = new Bit();
+    this.alternating = 1;
+
+    this.jitterFinite = new Finite();
+    this.jitterBalanced = new Balanced();
+    this.jitterBit = new Bit();
+    this.jitterAlternating = 1;
 
     this.pre = [];
     this.post = [this.model()];
@@ -157,14 +192,13 @@ class Noise extends AudioWorkletProcessor {
       } else if (data.value === "normal") {
         this.model = normal;
       } else if (data.value === "balanced") {
-        this._generator = new Balanced();
-        this.model = this._generator.step.bind(this._generator);
+        this.model = this.balanced.step.bind(this.balanced);
       } else if (data.value === "finite") {
-        this._generator = new Finite(this.finiteLength, this.finiteSeed);
-        this.model = this._generator.step.bind(this._generator);
+        this.model = this.finite.step.bind(this.finite);
+      } else if (data.value === "bit") {
+        this.model = this.bit.step.bind(this.bit);
       } else if (data.value === "alternating") {
-        this._generator = -1
-        this.model = () => {this._generator = -this._generator; return this._generator};
+        this.model = () => { this.alternating = -this.alternating; return this.alternating; };
       } else {
         this.model = rand;
       }
@@ -176,39 +210,30 @@ class Noise extends AudioWorkletProcessor {
       } else if (data.value === "normal") {
         this.jitterModel = normal;
       } else if (data.value === "balanced") {
-        this._jitterGenerator = new Balanced();
-        this.jitterModel = this._jitterGenerator.step.bind(this._jitterGenerator);
+        this.jitterModel = this.jitterBalanced.step.bind(this.jitterBalanced);
       } else if (data.value === "finite") {
-        this._jitterGenerator = new Finite(this.jitterFiniteLength, this.jitterFiniteSeed);
-        this.jitterModel = this._jitterGenerator.step.bind(this._jitterGenerator);
+        this.jitterModel = this.jitterFinite.step.bind(this.jitterFinite);
+      } else if (data.value === "bit") {
+        this.jitterModel = this.jitterBit.step.bind(this.jitterBit);
       } else if (data.value === "alternating") {
-        this._jitterGenerator = -1;
-        this.jitterModel = () => {this._jitterGenerator = -this._jitterGenerator; return this._jitterGenerator};
+        this.jitterModel = () => { this.jitterAlternating = -this.jitterAlternating; return this.jitterAlternating };
       } else {
         this.jitterModel = rand;
       }
     } else if (data.type === "jitterType") {
       this.jitterType = data.value;
     } else if (data.type === "finiteLength") {
-      this.finiteLength = data.value;
-      if (this._generator instanceof Finite) {
-        this._generator.length = this.finiteLength;
-      }
+      this.finite.length = data.value;
     } else if (data.type === "finiteSeed") {
-      this.finiteSeed = data.value;
-      if (this._generator instanceof Finite) {
-        this._generator.seed = this.finiteSeed;
-      }
+      this.finite.seed = data.value;
+    } else if (data.type === "bitDepth") {
+      this.bit.depth = data.value;
     } else if (data.type === "jitterFiniteLength") {
-      this.jitterFiniteLength = data.value;
-      if (this._jitterGenerator instanceof Finite) {
-        this._jitterGenerator.length = this.jitterFiniteLength;
-      }
+      this.jitterFinite.length = data.value;
     } else if (data.type === "jitterFiniteSeed") {
-      this.jitterFiniteSeed = data.value;
-      if (this._jitterGenerator instanceof Finite) {
-        this._jitterGenerator.seed = this.jitterFiniteSeed;
-      }
+      this.jitterFinite.seed = data.value;
+    } else if (data.type === "jitterBitDepth") {
+      this.jitterBit.depth = data.value;
     } else if (data.type === "preStages") {
       this.pre = Array(data.value).fill(0);
       for (let i = 0; i < data.value; ++i) {

@@ -190,6 +190,8 @@ class Noise extends AudioWorkletProcessor {
       this.alternating = 1;
       this.jitterFinite.reset();
       this.jitterAlternating = 1;
+    } else if (data.type === "cancel") {
+      this.messages = [];
     } else if (data.type === "tableDelta") {
       this.tableDelta = data.value;
     } else if (data.type === "tables") {

@@ -122,6 +122,7 @@ function obtainNoise(
 
 function disposeNoise(noise) {
     const ctx = getAudioContext();
+    noise.port.postMessage({type: "cancel"});
     noise.parameters.get("nat").cancelScheduledValues(ctx.currentTime);
     noise.parameters.get("jitter").cancelScheduledValues(ctx.currentTime);
     noise.disconnect();

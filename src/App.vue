@@ -82,9 +82,9 @@ export default {
         {
           instrument: {
             type: 'noise',
-            frequencyGlide: 10,
-            attack: 10,
-            release: 15,
+            frequencyGlide: 1,
+            attack: 1,
+            release: 2,
             model: 'uniform',
             jitterModel: 'balanced',
             jitterType: 'pulseWidth',
@@ -244,7 +244,7 @@ export default {
           frequency = null;
           velocity = 0;
         } else if (cell !== null) {
-          const frequency = this.cellFrequency(cell);
+          frequency = this.cellFrequency(cell);
           velocity = cell.velocity / 0xFF;
         }
         return {frequency, velocity};
@@ -808,7 +808,9 @@ export default {
     this.computerKeyboard.removeEventListener("keyup", this.computerKeyup);
     this.computerKeyboard.dispose();
     this.monophone.dispose();
-    this.noise.dispose();
+    if (this.noise !== null) {
+      this.noise.dispose();
+    }
     window.removeEventListener("mouseup", this.onMouseUp);
     window.removeEventListener("click", this.selectNothing);
     window.removeEventListener("keydown", this.windowKeydown);
@@ -845,7 +847,10 @@ export default {
     <label for="select-mos"> = {{ mosPattern }}</label>
 
     <label for="program"> Program: </label>
-    <input id="program" v-model="activeProgram" />
+    <input id="program" v-model="activeProgram" style="width:2em" />
+
+    <label for="highlight-period"> Highlights: </label>
+    <input id="highlight-period" type="number" v-model="highlightPeriod" />
   </div>
   <div class="break" />
   <div>

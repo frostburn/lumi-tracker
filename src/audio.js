@@ -90,7 +90,7 @@ function disposeOscillator(oscillator) {
 
 function obtainNoise(
         model="uniform", jitterModel="balanced", jitterType="pulseWidth",
-        bitDepth=1, finiteLength=8, finiteSeed=0,
+        bitDepth=1, finiteLength=8, finiteSeed=0, underSampling=1,
         jitterBitDepth=1, jitterFiniteLength=8, jitterFiniteSeed=0,
         diffStages=0, linear=false, tableDelta=0.02, tables=INSTRUMENTS.P0,
     ) {
@@ -113,6 +113,7 @@ function obtainNoise(
     noise.port.postMessage({ type: "jitterFiniteSeed", value: jitterFiniteSeed });
     noise.port.postMessage({ type: "diffStages", value: diffStages });
     noise.port.postMessage({ type: "linear", value: linear });
+    noise.port.postMessage({ type: "underSampling", value: underSampling });
     noise.port.postMessage({ type: "tableDelta", value: tableDelta });
     noise.port.postMessage({ type: "tables", value: tables });
 
@@ -370,7 +371,7 @@ export class Noise {
     }
 
     setFullConfig(data) {
-        ["model", "jitterModel", "jitterType", "bitDepth", "finiteLength", "finiteSeed", "jitterBitDepth", "jitterFiniteLength", "jitterFiniteSeed", "diffStages", "linear", "tableDelta"].forEach(type => {
+        ["model", "jitterModel", "jitterType", "bitDepth", "finiteLength", "finiteSeed", "jitterBitDepth", "jitterFiniteLength", "jitterFiniteSeed", "diffStages", "linear", "underSampling", "tableDelta"].forEach(type => {
             this.setConfig({ type, value: data[type] });
         });
         this.frequencyGlide = data.frequencyGlide;

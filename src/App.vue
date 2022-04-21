@@ -95,6 +95,7 @@ export default {
             jitterFiniteSeed: 0,
             diffStages: 0,
             linear: false,
+            underSampling: 1,
             tableDelta: 20,
           },
           patterns: [

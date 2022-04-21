@@ -135,6 +135,10 @@ class Noise extends AudioWorkletProcessor {
     this.jitterType = "pitch";
     this.speed = 1;
 
+    this.underSampling = 1;
+    this.holdIndex = 0;
+    this.holdValue = this.y1;
+
     this.tables = {
       amplitude: {
         linear: false,
@@ -241,6 +245,8 @@ class Noise extends AudioWorkletProcessor {
       }
     } else if (data.type === "linear") {
       this.linear = data.value;
+    } else if (data.type === "underSampling") {
+      this.underSampling = data.value;
     } else {
       throw `Unrecognized message ${data.type}`;
     }
@@ -266,49 +272,57 @@ class Noise extends AudioWorkletProcessor {
     const natValues = parameters.nat;
     const jitterValues = parameters.jitter;
 
-    const dt = 1 / sampleRate;
+    const _dt = 1 / sampleRate;
 
     const channel = output[0];
     for (let i = 0; i < channel.length; i++) {
-      this.triggerMessages(t);
-      const x = this.tOnset / this.tableDelta;
+      if (this.holdIndex === 0) {
+        this.triggerMessages(t);
+        const x = this.tOnset / this.tableDelta;
 
-      const frequency = Math.exp(
-        natValues[Math.min(natValues.length-1, i)] +
-        getTableValue(x, this.tables.nat)
-      );
-      const amplitude = getTableValue(x, this.tables.amplitude);
+        const dt = _dt * this.underSampling;
 
-      const dp = this.speed * frequency * dt;
-
-      let result = this.y1;
-      if (this.linear) {
-        result = this.y0 + (this.y1 - this.y0) * this.phase;
-      }
-
-      channel[i] = result * amplitude;
-
-      t += dt;
-      this.tOnset += dt;
-      this.phase += dp;
-      if (this.phase > 1) {
-        const remainder = (this.phase - 1) / this.speed;
-
-        this.generateValue();
-
-        const jitter = (
-          jitterValues[Math.min(jitterValues.length-1, i)] +
-          getTableValue(x, this.tables.jitter)
+        const frequency = Math.exp(
+          natValues[Math.min(natValues.length-1, i)] +
+          getTableValue(x, this.tables.nat)
         );
-        this.speed = jitter * this.jitterModel();
-        if (this.jitterType === "pulseWidth") {
-          this.speed = 1 / (1 + Math.max(-0.99, this.speed));
-        } else {
-          this.speed = Math.exp(this.speed);
+        const amplitude = getTableValue(x, this.tables.amplitude);
+
+        const dp = this.speed * frequency * dt;
+
+        let result = this.y1;
+        if (this.linear) {
+          result = this.y0 + (this.y1 - this.y0) * this.phase;
         }
 
-        this.phase = (remainder * this.speed) % 1;
+        this.holdValue = result * amplitude;
+        channel[i] = this.holdValue;
+
+        t += dt;
+        this.tOnset += dt;
+        this.phase += dp;
+        if (this.phase > 1) {
+          const remainder = (this.phase - 1) / this.speed;
+
+          this.generateValue();
+
+          const jitter = (
+            jitterValues[Math.min(jitterValues.length-1, i)] +
+            getTableValue(x, this.tables.jitter)
+          );
+          this.speed = jitter * this.jitterModel();
+          if (this.jitterType === "pulseWidth") {
+            this.speed = 1 / (1 + Math.max(-0.99, this.speed));
+          } else {
+            this.speed = Math.exp(this.speed);
+          }
+
+          this.phase = (remainder * this.speed) % 1;
+        }
+      } else {
+        channel[i] = this.holdValue;
       }
+      this.holdIndex = (this.holdIndex + 1) % this.underSampling;
     }
 
     for (let j = 1; j < output.length; ++j) {

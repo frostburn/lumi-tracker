@@ -63,6 +63,8 @@ export default {
               <input id="diff-stages" type="number" min="0" v-model="instrument.diffStages" />
               <label for="linear"> Linear: </label>
               <input id="linear" type="checkbox" v-model="instrument.linear" />
+              <label for="diff-stages"> Under-sampling: </label>
+              <input id="diff-stages" type="number" min="1" v-model="instrument.underSampling" />
               <label for="table-delta"> Table Delta: </label>
               <input id="table-delta" type="number" min="1" v-model="instrument.tableDelta" />
             </template>

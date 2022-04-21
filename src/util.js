@@ -10,6 +10,14 @@ export function gcd(a, b) {
     }
 }
 
+export function unicodeSplit(str) {
+    return [...str];
+}
+
+export function unicodeLength(str) {
+    return [...str].length;
+}
+
 export const NOTE_OFF = Symbol();
 
 // Make C4 the reference pitch with A4=440Hz

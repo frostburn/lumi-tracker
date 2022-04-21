@@ -7,7 +7,7 @@ import ComputerKeyboard from "./components/ComputerKeyboard.vue";
 import MosModal from "./components/MosModal.vue";
 import EdoModal from "./components/EdoModal.vue";
 import InstrumentModal from "./components/InstrumentModal.vue";
-import { mod, NOTE_OFF, REFERENCE_FREQUENCY, REFERENCE_OCTAVE, ratioToCents } from "./util.js";
+import { mod, NOTE_OFF, REFERENCE_FREQUENCY, REFERENCE_OCTAVE, ratioToCents, unicodeLength, unicodeSplit } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, setAudioDelay, safeNow } from "./audio.js";
 import { Monophone, availableWaveforms, setWaveform, loadAudioWorklets, Noise, availableNoiseModels } from "./audio.js";
@@ -32,6 +32,7 @@ export default {
       monophone: new Monophone("oddtheta3", 0.01, 0.02),
       noise: null,  // Can only be initialized on mounting
       activeInstrument: null,
+      activeProgram: "P0",
       computerKeyboard: null,
       computerNoteOffCallbacks: new Map(),
       activeComputerKeys: new Set(),
@@ -79,7 +80,7 @@ export default {
           ],
         },
         {
-          instrument: {  // TODO: Rest of the parameters
+          instrument: {
             type: 'noise',
             frequencyGlide: 10,
             attack: 10,
@@ -131,6 +132,11 @@ export default {
       },
       deep: true,
     },
+    activeProgram(newValue) {
+      if (newValue in INSTRUMENTS) {
+        this.noise.setProgram(INSTRUMENTS[newValue]);
+      }
+    }
   },
   computed: {
     countL() {
@@ -195,7 +201,8 @@ export default {
           }
           return {
             note: this.notation(cell.monzo),
-            velocity: cell.velocity
+            velocity: cell.velocity,
+            program: cell.program,
           };
         }));
       });
@@ -303,12 +310,17 @@ export default {
           const instrument = new Noise();
           this.configureNoise(instrument, track.instrument);
 
+          let currentProgram = null;
           let time = now;
           cells.forEach(cell => {
             if (cell === NOTE_OFF) {
               instrument.trackNoteOff(time);
-            }else if (cell !== null) {
+            } else if (cell !== null) {
               instrument.trackNoteOn(this.cellFrequency(cell), cell.velocity / 0xFF, time);
+              if (cell.program !== currentProgram) {
+                currentProgram = cell.program;
+                instrument.setProgram(INSTRUMENTS[currentProgram], time);
+              }
             }
             time += this.beatDuration;
           });
@@ -392,7 +404,7 @@ export default {
         }
       } else if (this.inputMode === "note" && this.activeRow !== null) {
         if (this.activeRow >= 0 && this.activeRow < this.columnHeight) {
-          this.activeCells[this.activeRow] = { monzo, velocity };
+          this.activeCells[this.activeRow] = { monzo, velocity, program: this.activeProgram };
           this.incrementRow();
           this.scrollIntoView();
         }
@@ -590,6 +602,19 @@ export default {
             this.scrollIntoView();
           }
         }
+        if (this.inputMode === "program") {
+          if (unicodeLength(event.key) === 1) {
+            const cell = this.activeCells[this.activeRow];
+            if (cell?.program === undefined) {
+              return;
+            }
+            const letters = unicodeSplit(cell.program);
+            letters[this.inputIndex] = event.key;
+            cell.program = letters.join("");
+            this.incrementRow();
+            this.scrollIntoView();
+          }
+        }
         if (event.key === "ArrowDown") {
           this.incrementRow();
         } else if (event.key === "ArrowUp") {
@@ -602,6 +627,12 @@ export default {
           } else if (this.inputMode === "velocity") {
             this.inputIndex++;
             if (this.inputIndex > 1) {
+              this.inputMode = "program";
+              this.inputIndex = 0;
+            }
+          } else if (this.inputMode === "program") {
+            this.inputIndex++;
+            if (this.inputIndex > 1) {
               this.inputIndex = 1;
               if (this.incrementColumn()) {
                 this.inputMode = "note";
@@ -612,7 +643,7 @@ export default {
         if (event.key === "ArrowLeft") {
           if (this.inputMode === "note") {
             if (this.decrementColumn()) {
-              this.inputMode = "velocity";
+              this.inputMode = "program";
               this.inputIndex = 1;
             }
           } else if (this.inputMode === "velocity") {
@@ -620,6 +651,12 @@ export default {
             if (this.inputIndex < 0) {
               this.inputIndex = 0;
               this.inputMode = "note";
+            }
+          } else if (this.inputMode === "program") {
+            this.inputIndex--;
+            if (this.inputIndex < 0) {
+              this.inputIndex = 1;
+              this.inputMode = "velocity";
             }
           }
         }
@@ -724,6 +761,12 @@ export default {
       this.inputIndex = inputIndex;
       this.inputMode = "velocity";
     },
+    selectProgram(columnIndex, rowIndex, inputIndex) {
+      this.activeColumn = columnIndex;
+      this.activeRow = rowIndex;
+      this.inputIndex = inputIndex;
+      this.inputMode = "program";
+    },
     selectNothing() {
       this.activeColumn = null;
       this.inputMode = null;
@@ -800,6 +843,9 @@ export default {
     <button id="select-edo" @click="showEdoModal = true; $refs.edoModal.edo = divisions">select EDO</button>
     <button id="select-mos" @click="showMosModal = true">select MOS</button>
     <label for="select-mos"> = {{ mosPattern }}</label>
+
+    <label for="program"> Program: </label>
+    <input id="program" v-model="activeProgram" />
   </div>
   <div class="break" />
   <div>
@@ -863,6 +909,7 @@ export default {
       :highlightPeriod="highlightPeriod"
       @noteClick="(i) => selectNote(index, i)"
       @velocityClick="(i, j) => selectVelocity(index, i, j)"
+      @programClick="(i, j) => selectProgram(index, i, j)"
     />
   </div>
   <div class="break"/>

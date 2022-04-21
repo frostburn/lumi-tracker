@@ -6,7 +6,7 @@ export default {
         TrackCell,
     },
     props: ["cells", "active", "activeRow", "inputMode", "inputIndex", "highlightPeriod"],
-    emits: ["noteClick", "velocityClick"],
+    emits: ["noteClick", "velocityClick", "programClick"],
     methods: {
         scrollIntoView(options) {
             this.$refs.cells[this.activeRow || 0].scrollIntoView(options);
@@ -28,6 +28,7 @@ export default {
             :inputIndex="inputIndex"
             @noteClick="$emit('noteClick', index)"
             @velocityClick="(i) => $emit('velocityClick', index, i)"
+            @programClick="(i) => $emit('programClick', index, i)"
         />
     </table>
 </template>

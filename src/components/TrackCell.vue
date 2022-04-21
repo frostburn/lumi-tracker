@@ -1,13 +1,16 @@
 <script>
 export default {
-    props: ['note', 'velocity', 'active', 'focused', 'inputMode', 'inputIndex', 'highlight'],
-    emits: ['noteClick', 'velocityClick'],
+    props: ['note', 'velocity', 'program', 'active', 'focused', 'inputMode', 'inputIndex', 'highlight'],
+    emits: ['noteClick', 'velocityClick', 'programClick'],
     computed: {
         hexVelocity() {
             if (isNaN(this.velocity)) {
                 return "..";
             }
             return this.velocity.toString(16).toUpperCase().padStart(2, "0");
+        },
+        normalizedProgram() {
+            return this.program || "..";
         },
     },
     methods: {
@@ -32,6 +35,10 @@ export default {
             <span :class="{ selected: inputIndex === 0 }" @click.stop="$emit('velocityClick', 0)">{{ hexVelocity[0] }}</span>
             <span :class="{ selected: inputIndex === 1 }" @click.stop="$emit('velocityClick', 1)">{{ hexVelocity[1] }}</span>
         </td>
+        <td class="program" :class="{ focused: focused && inputMode === 'program' }">
+            <span :class="{ selected: inputIndex === 0 }" @click.stop="$emit('programClick', 0)">{{ normalizedProgram[0] }}</span>
+            <span :class="{ selected: inputIndex === 1 }" @click.stop="$emit('programClick', 1)">{{ normalizedProgram[1] }}</span>
+        </td>
     </tr>
 </template>
 
@@ -52,6 +59,10 @@ export default {
 
     .velocity {
         color: lightgreen;
+    }
+
+    .program {
+        color: lightcoral;
     }
 
     .highlight {

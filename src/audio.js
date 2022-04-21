@@ -362,10 +362,10 @@ export class Noise {
         this.generator.port.postMessage(config);
     }
 
-    setInstrument(instrument, when) {
+    setProgram(program, when) {
         this.setConfig({
             type: "tables",
-            value: instrument,
+            value: program,
             when,
         });
     }

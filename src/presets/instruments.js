@@ -1,3 +1,4 @@
+// TODO: Decide if these are called instruments, programs or tables (or something else).
 // TODO: Unify: jitter = timbre, nats -> cents
 
 const INSTRUMENTS = {

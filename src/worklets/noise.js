@@ -48,10 +48,14 @@ class Finite {
     this.index = 0;
   }
 
+  reset() {
+    this.generator.seed(this.seed);
+    this.index = 0;
+  }
+
   step() {
     if (this.index >= this.length) {
-      this.generator.seed(this.seed);
-      this.index = 0;
+      this.reset();
     }
     this.index++;
     return this.generator.step01() * 2 - 1;
@@ -182,6 +186,10 @@ class Noise extends AudioWorkletProcessor {
     const data = msg.data;
     if (data.type === "onset") {
       this.tOnset = 0;
+      this.finite.reset();
+      this.alternating = 1;
+      this.jitterFinite.reset();
+      this.jitterAlternating = 1;
     } else if (data.type === "tableDelta") {
       this.tableDelta = data.value;
     } else if (data.type === "tables") {

@@ -4,6 +4,7 @@
 const INT32_MASK_FULL = 4294967295;
 const INT32_MASK_POSITIVE = 2147483647;
 const INVERSE_NORM = 1 / INT32_MASK_POSITIVE;
+const INVERSE_NORMAL = 0.5 * INVERSE_NORM;
 
 export default class JKISS31 {
   constructor(seed) {
@@ -79,6 +80,6 @@ export default class JKISS31 {
 
   /* Not a true normal distribution, but somewhat close. */
   normal() {
-    return (this.step() - this.step() + this.step() - this.step() + this.step() - this.step()) * INVERSE_NORM;
+    return (this.step() - this.step() + this.step() - this.step() + this.step() - this.step()) * INVERSE_NORMAL;
   }
 }

@@ -93,8 +93,8 @@ export default {
             jitterBitDepth: 1,
             jitterFiniteLength: 8,
             jitterFiniteSeed: 0,
-            preStages: 0,
-            postStages: 0,
+            diffStages: 0,
+            linear: false,
             tableDelta: 20,
           },
           patterns: [

@@ -92,7 +92,7 @@ function obtainNoise(
         model="uniform", jitterModel="balanced", jitterType="pulseWidth",
         bitDepth=1, finiteLength=8, finiteSeed=0,
         jitterBitDepth=1, jitterFiniteLength=8, jitterFiniteSeed=0,
-        preStages=0, postStages=0, tableDelta=0.02, tables=INSTRUMENTS.P0,
+        diffStages=0, linear=false, tableDelta=0.02, tables=INSTRUMENTS.P0,
     ) {
     const ctx = getAudioContext();
     let noise;
@@ -111,8 +111,8 @@ function obtainNoise(
     noise.port.postMessage({ type: "jitterBitDepth", value: jitterBitDepth });
     noise.port.postMessage({ type: "jitterFiniteLength", value: jitterFiniteLength });
     noise.port.postMessage({ type: "jitterFiniteSeed", value: jitterFiniteSeed });
-    noise.port.postMessage({ type: "preStages", value: preStages });
-    noise.port.postMessage({ type: "postStages", value: postStages });
+    noise.port.postMessage({ type: "diffStages", value: diffStages });
+    noise.port.postMessage({ type: "linear", value: linear });
     noise.port.postMessage({ type: "tableDelta", value: tableDelta });
     noise.port.postMessage({ type: "tables", value: tables });
 
@@ -370,7 +370,7 @@ export class Noise {
     }
 
     setFullConfig(data) {
-        ["model", "jitterModel", "jitterType", "bitDepth", "finiteLength", "finiteSeed", "jitterBitDepth", "jitterFiniteLength", "jitterFiniteSeed", "preStages", "postStages", "tableDelta"].forEach(type => {
+        ["model", "jitterModel", "jitterType", "bitDepth", "finiteLength", "finiteSeed", "jitterBitDepth", "jitterFiniteLength", "jitterFiniteSeed", "diffStages", "linear", "tableDelta"].forEach(type => {
             this.setConfig({ type, value: data[type] });
         });
         this.frequencyGlide = data.frequencyGlide;

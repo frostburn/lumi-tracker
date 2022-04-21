@@ -89,8 +89,6 @@ class Bit {
   }
 }
 
-const LEAK = 0.9;
-
 class Noise extends AudioWorkletProcessor {
 
   // Static getter to define AudioParam objects in this custom processor.
@@ -129,8 +127,10 @@ class Noise extends AudioWorkletProcessor {
     this.jitterBit = new Bit();
     this.jitterAlternating = 1;
 
-    this.pre = [];
-    this.post = [this.model()];
+    this.diffs = [];
+    this.linear = false;
+    this.y0 = this.model();
+    this.y1 = this.model();
 
     this.jitterType = "pitch";
     this.speed = 0;
@@ -234,13 +234,13 @@ class Noise extends AudioWorkletProcessor {
       this.jitterFinite.seed = data.value;
     } else if (data.type === "jitterBitDepth") {
       this.jitterBit.depth = data.value;
-    } else if (data.type === "preStages") {
-      this.pre = Array(data.value).fill(0);
+    } else if (data.type === "diffStages") {
+      this.diffs = Array(data.value).fill(0);
       for (let i = 0; i < data.value; ++i) {
         this.generateValue();
       }
-    } else if (data.type === "postStages") {
-      this.post = Array(data.value+1).fill(0);
+    } else if (data.type === "linear") {
+      this.linear = data.value;
     } else {
       throw `Unrecognized message ${data.type}`;
     }
@@ -249,13 +249,14 @@ class Noise extends AudioWorkletProcessor {
   generateValue() {
     let newValue = this.model();
     let oldValue;
-    for (let j = 0; j < this.pre.length; ++j) {
-      oldValue = this.pre[j];
-      this.pre[j] = newValue;
+    for (let j = 0; j < this.diffs.length; ++j) {
+      oldValue = this.diffs[j];
+      this.diffs[j] = newValue;
       newValue = newValue - oldValue;
     }
 
-    this.post[this.post.length - 1] = newValue;
+    this.y0 = this.y1;
+    this.y1 = newValue / (1 << this.diffs.length);  // Compensate for [-1, 1] range
   }
 
   process(inputs, outputs, parameters) {
@@ -280,14 +281,13 @@ class Noise extends AudioWorkletProcessor {
       const amplitude = getTableValue(x, this.tables.amplitude);
 
       const dp = frequency * dt;
-      const dl = LEAK**dp;
 
-      // TODO: Volume compensation for high frequencies or more accurate integration.
-      for (let j = 0; j < this.post.length - 1; ++j) {
-        this.post[j] = this.post[j] * dl + this.post[j+1] * dp;
+      let result = this.y1;
+      if (this.linear) {
+        result = this.y0 + (this.y1 - this.y0) * this.phase;
       }
 
-      channel[i] = this.post[0] * amplitude;
+      channel[i] = result * amplitude;
 
       t += dt;
       this.tOnset += dt;

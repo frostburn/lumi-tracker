@@ -59,10 +59,10 @@ export default {
               <input id="jitter-finite-length" type="number" min="1" v-model="instrument.jitterFiniteLength" />
               <label for="jitter-finite-seed"> Jitter Finite Seed: </label>
               <input id="jitter-finite-seed" type="number" min="1" v-model="instrument.jitterFiniteSeed" />
-              <label for="pre-stages"> Pre Stages: </label>
-              <input id="pre-stages" type="number" min="0" v-model="instrument.preStages" />
-              <label for="post-stages"> Post Stages: </label>
-              <input id="post-stages" type="number" min="0" v-model="instrument.postStages" />
+              <label for="diff-stages"> Diff Stages: </label>
+              <input id="diff-stages" type="number" min="0" v-model="instrument.diffStages" />
+              <label for="linear"> Linear: </label>
+              <input id="linear" type="checkbox" v-model="instrument.linear" />
               <label for="table-delta"> Table Delta: </label>
               <input id="table-delta" type="number" min="1" v-model="instrument.tableDelta" />
             </template>

@@ -1,7 +1,6 @@
-// TODO: Decide if these are called instruments, programs or tables (or something else).
 // TODO: Unify: jitter = timbre, nats -> cents
 
-const INSTRUMENTS = {
+const PROGRAMS = {
     P0: {  // Default
         amplitude: {
             linear: false,
@@ -29,7 +28,7 @@ const INSTRUMENTS = {
     },
 };
 
-Object.values(INSTRUMENTS).forEach(instrument => {
+Object.values(PROGRAMS).forEach(instrument => {
     Object.values(instrument).forEach(table => {
         if (table.linear === undefined) {
             table.linear = true;
@@ -43,4 +42,4 @@ Object.values(INSTRUMENTS).forEach(instrument => {
     });
 });
 
-export default INSTRUMENTS;
+export default PROGRAMS;

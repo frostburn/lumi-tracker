@@ -13,7 +13,7 @@ import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAc
 import { Monophone, availableWaveforms, setWaveform, loadAudioWorklets, Noise, availableNoiseModels } from "./audio.js";
 import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
-import INSTRUMENTS from "./presets/instruments.js";
+import PROGRAMS from "./presets/programs.js";
 
 const COLUMN_HEIGHT = 64;
 
@@ -133,8 +133,8 @@ export default {
       deep: true,
     },
     activeProgram(newValue) {
-      if (newValue in INSTRUMENTS) {
-        this.noise.setProgram(INSTRUMENTS[newValue]);
+      if (newValue in PROGRAMS) {
+        this.noise.setProgram(PROGRAMS[newValue]);
       }
     }
   },
@@ -319,7 +319,7 @@ export default {
               instrument.trackNoteOn(this.cellFrequency(cell), cell.velocity / 0xFF, time);
               if (cell.program !== currentProgram) {
                 currentProgram = cell.program;
-                instrument.setProgram(INSTRUMENTS[currentProgram], time);
+                instrument.setProgram(PROGRAMS[currentProgram], time);
               }
             }
             time += this.beatDuration;

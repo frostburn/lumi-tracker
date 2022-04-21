@@ -1,5 +1,5 @@
 import { ratioToCents } from "./util.js";
-import INSTRUMENTS from "./presets/instruments.js";
+import PROGRAMS from "./presets/programs.js";
 
 let AUDIO_CTX;
 // WebAudio API especially on Firefox doesn't perfectly sync AUDIO_CTX.currentTime
@@ -92,7 +92,7 @@ function obtainNoise(
         model="uniform", jitterModel="balanced", jitterType="pulseWidth",
         bitDepth=1, finiteLength=8, finiteSeed=0, underSampling=1,
         jitterBitDepth=1, jitterFiniteLength=8, jitterFiniteSeed=0,
-        diffStages=0, linear=false, tableDelta=0.02, tables=INSTRUMENTS.P0,
+        diffStages=0, linear=false, tableDelta=0.02, tables=PROGRAMS.P0,
     ) {
     const ctx = getAudioContext();
     let noise;

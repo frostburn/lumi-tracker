@@ -133,7 +133,7 @@ class Noise extends AudioWorkletProcessor {
     this.y1 = this.model();
 
     this.jitterType = "pitch";
-    this.speed = 0;
+    this.speed = 1;
 
     this.tables = {
       amplitude: {
@@ -275,12 +275,11 @@ class Noise extends AudioWorkletProcessor {
 
       const frequency = Math.exp(
         natValues[Math.min(natValues.length-1, i)] +
-        getTableValue(x, this.tables.nat) +
-        this.speed
+        getTableValue(x, this.tables.nat)
       );
       const amplitude = getTableValue(x, this.tables.amplitude);
 
-      const dp = frequency * dt;
+      const dp = this.speed * frequency * dt;
 
       let result = this.y1;
       if (this.linear) {
@@ -293,7 +292,7 @@ class Noise extends AudioWorkletProcessor {
       this.tOnset += dt;
       this.phase += dp;
       if (this.phase > 1) {
-        this.phase %= 1;
+        const remainder = (this.phase - 1) / this.speed;
 
         this.generateValue();
 
@@ -303,8 +302,12 @@ class Noise extends AudioWorkletProcessor {
         );
         this.speed = jitter * this.jitterModel();
         if (this.jitterType === "pulseWidth") {
-          this.speed = -Math.log(Math.max(0.01, 1 + this.speed));
+          this.speed = 1 / (1 + Math.max(-0.99, this.speed));
+        } else {
+          this.speed = Math.exp(this.speed);
         }
+
+        this.phase = (remainder * this.speed) % 1;
       }
     }
 

@@ -46,65 +46,67 @@ export default {
       showMosModal: false,
       showEdoModal: false,
       showInstrumentModal: false,
-      mosPattern: "LLsLLLs",
-      l: 2,
-      s: 1,
-      equave: 2,
       accidentals: "sharps",
       pitchBendMonzo: [1, 0],
-      baseFrequency: REFERENCE_FREQUENCY,
-      beatsPerMinute: 480,
       audioDelay: 1,
       playing: false,
       activeRow: null,
       activeColumn: null,
-      activeFrame: 0,
+      activeFrameIndex: 0,
       octave: REFERENCE_OCTAVE,
       velocity: 0x80,
-      highlightPeriod: 4,
       inputMode: null,
       inputIndex: null,
       cancelRowCallback: null,
-      frames: [[0, 0], [1, 1]],
-      tracks: [
-        {
-          instrument: {
-            type: 'monophone',
-            waveform: 'oddtheta3',
-            frequencyGlide: 10,
-            amplitudeGlide: 20,
+      song: {
+        highlightPeriod: 4,
+        baseFrequency: REFERENCE_FREQUENCY,
+        beatsPerMinute: 480,
+        mosPattern: "LLsLLLs",
+        l: 2,
+        s: 1,
+        equave: 2,
+        frames: [[0, 0], [1, 1]],
+        tracks: [
+          {
+            instrument: {
+              type: 'monophone',
+              waveform: 'oddtheta3',
+              frequencyGlide: 10,
+              amplitudeGlide: 20,
+            },
+            patterns: [
+              Array(COLUMN_HEIGHT).fill(null),
+              Array(COLUMN_HEIGHT).fill(null),
+            ],
           },
-          patterns: [
-            Array(COLUMN_HEIGHT).fill(null),
-            Array(COLUMN_HEIGHT).fill(null),
-          ],
-        },
-        {
-          instrument: {
-            type: 'noise',
-            frequencyGlide: 1,
-            attack: 1,
-            release: 2,
-            model: 'uniform',
-            jitterModel: 'balanced',
-            jitterType: 'pulseWidth',
-            bitDepth: 1,
-            finiteLength: 8,
-            finiteSeed: 0,
-            jitterBitDepth: 1,
-            jitterFiniteLength: 8,
-            jitterFiniteSeed: 0,
-            diffStages: 0,
-            linear: false,
-            underSampling: 1,
-            tableDelta: 20,
+          {
+            instrument: {
+              type: 'noise',
+              frequencyGlide: 1,
+              attack: 1,
+              release: 2,
+              model: 'uniform',
+              jitterModel: 'balanced',
+              jitterType: 'pulseWidth',
+              bitDepth: 1,
+              finiteLength: 8,
+              finiteSeed: 0,
+              jitterBitDepth: 1,
+              jitterFiniteLength: 8,
+              jitterFiniteSeed: 0,
+              diffStages: 0,
+              linear: false,
+              underSampling: 1,
+              tableDelta: 20,
+            },
+            patterns: [
+              Array(COLUMN_HEIGHT).fill(null),
+              Array(COLUMN_HEIGHT).fill(null),
+            ],
           },
-          patterns: [
-            Array(COLUMN_HEIGHT).fill(null),
-            Array(COLUMN_HEIGHT).fill(null),
-          ],
-        },
-      ]
+        ]
+      },
     }
   },
   watch: {
@@ -141,31 +143,34 @@ export default {
   computed: {
     countL() {
       let count = 0;
-      this.mosPattern.split("").forEach(c => c === "L" ? count++ : null);
+      this.song.mosPattern.split("").forEach(c => c === "L" ? count++ : null);
       return count;
     },
     countS() {
       let count = 0;
-      this.mosPattern.split("").forEach(c => c === "s" ? count++ : null);
+      this.song.mosPattern.split("").forEach(c => c === "s" ? count++ : null);
       return count;
+    },
+    mosSize() {
+      return this.song.mosPattern.length;
     },
     mos() {
       return this.countL + "L " + this.countS + "s";
     },
     divisions() {
-      return this.countL*this.l + this.countS*this.s;
+      return this.countL*this.song.l + this.countS*this.song.s;
     },
     natsL() {
-      return Math.log(this.equave) * this.l / this.divisions;
+      return Math.log(this.song.equave) * this.song.l / this.divisions;
     },
     natsS() {
-      return Math.log(this.equave) * this.s / this.divisions;
+      return Math.log(this.song.equave) * this.song.s / this.divisions;
     },
     equaveCents() {
-      return ratioToCents(this.equave);
+      return ratioToCents(this.song.equave);
     },
     pitchBendDepth() {
-      return (this.l*this.pitchBendMonzo[0] + this.s*this.pitchBendMonzo[1]) / this.divisions * this.equaveCents;
+      return (this.song.l*this.pitchBendMonzo[0] + this.song.s*this.pitchBendMonzo[1]) / this.divisions * this.equaveCents;
     },
     notation() {
       if (this.mos === "5L 2s") {
@@ -188,10 +193,13 @@ export default {
       }
       return "Ats (flat)";
     },
+    activeFrame() {
+      return this.song.frames[this.activeFrameIndex];
+    },
     cellsWithNotes() {
       const result = [];
-      this.tracks.forEach((track, i) => {
-        const cells = track.patterns[this.frames[this.activeFrame][i]];
+      this.song.tracks.forEach((track, i) => {
+        const cells = track.patterns[this.activeFrame[i]];
         result.push(cells.map(cell => {
           if (cell === null) {
             return {note: "", velocity: NaN};
@@ -209,13 +217,13 @@ export default {
       return result;
     },
     activeCells() {
-      return this.tracks[this.activeColumn].patterns[this.frames[this.activeFrame][this.activeColumn]];
+      return this.song.tracks[this.activeColumn].patterns[this.activeFrame[this.activeColumn]];
     },
     columnHeight() {
-      return this.tracks[0].patterns[this.frames[this.activeFrame][0]].length;
+      return this.song.tracks[0].patterns[this.activeFrame[0]].length;
     },
     beatDuration() {
-      return 60 / this.beatsPerMinute;
+      return 60 / this.song.beatsPerMinute;
     },
     activeMiniKeys() {
       const result = new Set();
@@ -233,8 +241,8 @@ export default {
   },
   methods: {
     cellFrequency(cell) {
-      const step = this.l * cell.monzo[0] + this.s * cell.monzo[1];
-      return this.baseFrequency * this.equave ** (step / this.divisions);
+      const step = this.song.l * cell.monzo[0] + this.song.s * cell.monzo[1];
+      return this.song.baseFrequency * this.song.equave ** (step / this.divisions);
     },
     cellsToFrequencies(cells) {
       let frequency = null;
@@ -288,12 +296,12 @@ export default {
       this.cancelPlay();
       suspendAudio();
       const now = safeNow();
-      this.tracks.forEach((track, i) => {
+      this.song.tracks.forEach((track, i) => {
         let cells = [];
         if (extent === "frame") {
-          cells = track.patterns[this.frames[this.activeFrame][i]];
+          cells = track.patterns[this.activeFrame[i]];
         } else if (extent === "song") {
-          this.frames.forEach(frame => {
+          this.song.frames.forEach(frame => {
             cells = cells.concat(track.patterns[frame[i]]);
           });
         }
@@ -358,7 +366,7 @@ export default {
       }
       this.activeRow = -1;
       if (extent === "song") {
-        this.activeFrame = 0;
+        this.activeFrameIndex = 0;
       }
       activateNextRow.bind(this)();
 
@@ -373,11 +381,11 @@ export default {
       this.midiInput = WebMidi.getInputById(id);
     },
     scaleStepToMonzo(step) {
-        const equaves = Math.floor(step / this.mosPattern.length);
-        step -= equaves * this.mosPattern.length;
+        const equaves = Math.floor(step / this.mosSize);
+        step -= equaves * this.mosSize;
         const monzo = [this.countL * equaves, this.countS * equaves];
         for (let i = 0; i < step; ++i) {
-          if (this.mosPattern[i] == "L") {
+          if (this.song.mosPattern[i] == "L") {
             monzo[0]++;
           } else {
             monzo[1]++;
@@ -396,7 +404,7 @@ export default {
       monzo[0] += this.countL * octave;
       monzo[1] += this.countS * octave;
       if (this.inputMode === null) {
-        const frequency = this.baseFrequency * Math.exp(this.natsL * monzo[0] + this.natsS * monzo[1]);
+        const frequency = this.song.baseFrequency * Math.exp(this.natsL * monzo[0] + this.natsS * monzo[1]);
         if (this.activeInstrument.type === "monophone") {
           return this.monophone.noteOn(frequency, velocity / 0xFF);
         } else {
@@ -494,7 +502,7 @@ export default {
       }
     },
     incrementColumn() {
-      if (this.activeColumn >= this.tracks.length - 1) {
+      if (this.activeColumn >= this.song.tracks.length - 1) {
         return false;
       }
       this.activeColumn++;
@@ -529,11 +537,11 @@ export default {
     },
     incrementRowOrFrame() {
       if (this.activeRow >= this.columnHeight - 1) {
-        if (this.activeFrame >= this.frames.length - 1) {
+        if (this.activeFrameIndex >= this.song.frames.length - 1) {
           return false;
         }
         this.activeRow = 0;
-        this.activeFrame++;
+        this.activeFrameIndex++;
       } else {
         this.activeRow++;
       }
@@ -685,8 +693,8 @@ export default {
       }
       let monzo;
       if (y === 0) {
-        const step = x + this.mosPattern.length;
-        if (this.mosPattern[mod(step - 1, this.mosPattern.length)] === "L") {
+        const step = x + this.mosSize;
+        if (this.song.mosPattern[mod(step - 1, this.mosSize)] === "L") {
           if (this.accidentals === "sharps") {
             monzo = this.scaleStepToMonzo(step - 1);
             monzo[0]++;
@@ -698,10 +706,10 @@ export default {
           }
         }
       } else if (y === 1) {
-        monzo = this.scaleStepToMonzo(x + this.mosPattern.length);
+        monzo = this.scaleStepToMonzo(x + this.mosSize);
       } else if (y === 2) {
         const step = x;
-        if (this.mosPattern[mod(step, this.mosPattern.length)] === "L") {
+        if (this.song.mosPattern[mod(step, this.mosSize)] === "L") {
           if (this.accidentals === "sharps") {
             monzo = this.scaleStepToMonzo(step);
             monzo[0]++;
@@ -729,7 +737,7 @@ export default {
       this.activeComputerKeys.delete(event.code);
     },
     addTrack() {
-      this.tracks.push({
+      this.song.tracks.push({
         instrument: {
           monophonic: true,
           waveform: 'theta4',
@@ -737,18 +745,18 @@ export default {
           amplitudeGlide: 20,
         },
         patterns: [
-          Array(this.tracks[0].patterns[0].length).fill(null),
-          Array(this.tracks[0].patterns[1].length).fill(null),
+          Array(this.song.tracks[0].patterns[0].length).fill(null),
+          Array(this.song.tracks[0].patterns[1].length).fill(null),
         ],
       });
-      this.frames.forEach((frame, i) => frame.push(i));
+      this.song.frames.forEach((frame, i) => frame.push(i));
     },
     addFrame() {
-      this.tracks.forEach(track => {
+      this.song.tracks.forEach(track => {
         track.patterns.push(Array(this.columnHeight).fill(null));
       });
-      const newPattern = this.frames.length;
-      this.frames.push(Array(this.tracks.length).fill(newPattern));
+      const newPattern = this.song.frames.length;
+      this.song.frames.push(Array(this.song.tracks.length).fill(newPattern));
     },
     selectNote(columnIndex, rowIndex) {
       this.activeColumn = columnIndex;
@@ -773,22 +781,40 @@ export default {
       this.inputIndex = null;
     },
     choosePattern(pattern) {
-      this.mosPattern = pattern;
+      this.song.mosPattern = pattern;
       this.showMosModal = false;
     },
     chooseEdo(l, s, pattern) {
-      this.l = l;
-      this.s = s;
-      this.mosPattern = pattern;
+      this.song.l = l;
+      this.song.s = s;
+      this.song.mosPattern = pattern;
       this.showEdoModal = false;
     },
     openInstrumentModal(instrument) {
       this.activeInstrument = instrument;
       this.showInstrumentModal = true;
     },
+    saveLocalStorage() {
+      function replacer(key, value) {
+        if (value === NOTE_OFF) {
+          return "__NOTE_OFF";
+        }
+        return value;
+      }
+      window.localStorage.lumiTrackerSong = JSON.stringify(this.song, replacer);
+    },
+    loadLocalStorage() {
+      function reviver(key, value) {
+        if (value === "__NOTE_OFF") {
+          return NOTE_OFF;
+        }
+        return value;
+      }
+      this.song = JSON.parse(window.localStorage.lumiTrackerSong, reviver);
+    },
   },
   async mounted() {
-    this.activeInstrument = this.tracks[0].instrument;
+    this.activeInstrument = this.song.tracks[0].instrument;
     window.addEventListener("mouseup", this.onMouseUp);
     window.addEventListener("click", this.selectNothing);
     this.computerKeyboard = new Keyboard();
@@ -840,28 +866,28 @@ export default {
     <input id="audio-delay" v-model="audioDelay" type="number" min="0" />
 
     <label for="tempo"> BPM: </label>
-    <input id="tempo" v-model="beatsPerMinute" type="number" min="1" />
+    <input id="tempo" v-model="song.beatsPerMinute" type="number" min="1" />
 
     <button id="select-edo" @click="showEdoModal = true; $refs.edoModal.edo = divisions">select EDO</button>
     <button id="select-mos" @click="showMosModal = true">select MOS</button>
-    <label for="select-mos"> = {{ mosPattern }}</label>
+    <label for="select-mos"> = {{ song.mosPattern }}</label>
 
     <label for="program"> Program: </label>
     <input id="program" v-model="activeProgram" style="width:2em" />
 
     <label for="highlight-period"> Highlights: </label>
-    <input id="highlight-period" type="number" v-model="highlightPeriod" />
+    <input id="highlight-period" type="number" v-model="song.highlightPeriod" />
   </div>
   <div class="break" />
   <div>
     <label for="l">L=</label>
-    <input id="l" v-model="l" type="number">
+    <input id="l" v-model="song.l" type="number">
     <label for="s"> s=</label>
-    <input id="s" v-model="s" type="number">
+    <input id="s" v-model="song.s" type="number">
     <label for="equave"> = {{divisions}}ed</label>
-    <input id="equave" v-model="equave" type="number" step="0.01">
+    <input id="equave" v-model="song.equave" type="number" step="0.01">
     <label for="frame"> Frame: </label>
-    <input id="frame" v-model="activeFrame" type="number" min="0" :max="frames.length - 1" />
+    <input id="frame" v-model="activeFrameIndex" type="number" min="0" :max="song.frames.length - 1" />
     <button @click="addFrame">add frame</button>
     <label for="velocity"> Velocity: </label>
     <input id="velocity" v-model="velocity" type="number" min="0" max="255" />
@@ -881,12 +907,15 @@ export default {
     <label for="sharps">{{ sharpsStr }} </label>
 
     <input type="radio" id="flats" value="flats" v-model="accidentals" />
-    <label for="flats">{{ flatsStr }}</label>
+    <label for="flats">{{ flatsStr + " "}}</label>
+
+    <button @click="saveLocalStorage">Save</button>
+    <button @click="loadLocalStorage">Load</button>
   </div>
   <div class="break"/>
   <table>
     <tr>
-      <th v-for="track of tracks">
+      <th v-for="track of song.tracks">
         <select v-model="track.instrument.waveform" @focus="activeInstrument = track.instrument" v-if="track.instrument.type === 'monophone'">
           <option v-for="waveform of waveforms">{{ waveform }}</option>
         </select>
@@ -901,7 +930,7 @@ export default {
     <TrackRowLabels
       :numRows="columnHeight"
       @click="(i) => activeRow = i"
-      :highlightPeriod="highlightPeriod"
+      :highlightPeriod="song.highlightPeriod"
     />
     <Track
       v-for="(cells, index) of cellsWithNotes" :cells="cells"
@@ -911,7 +940,7 @@ export default {
       :activeRow="activeRow"
       :inputMode="inputMode"
       :inputIndex="inputIndex"
-      :highlightPeriod="highlightPeriod"
+      :highlightPeriod="song.highlightPeriod"
       @noteClick="(i) => selectNote(index, i)"
       @velocityClick="(i, j) => selectVelocity(index, i, j)"
       @programClick="(i, j) => selectProgram(index, i, j)"

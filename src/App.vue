@@ -92,9 +92,11 @@ export default {
               bitDepth: 1,
               finiteLength: 8,
               finiteSeed: 0,
+              logisticR: 4,
               jitterBitDepth: 1,
               jitterFiniteLength: 8,
               jitterFiniteSeed: 0,
+              jitterLogisticR: 4,
               diffStages: 0,
               linear: false,
               underSampling: 1,
@@ -472,17 +474,16 @@ export default {
       this.midiInput.addListener("noteoff", this.midiNoteOff);
 
       function pitchBend(e) {
-        const ctx = getAudioContext();
-        this.monophone.detune.setTargetAtTime(this.pitchBendDepth * e.value, ctx.currentTime, 0.0001);
-        this.noise.detune.setTargetAtTime(this.pitchBendDepth * e.value, ctx.currentTime, 0.0001);
+        this.monophone.detune.setTargetAtTime(this.pitchBendDepth * e.value, safeNow(), 0.0001);
+        this.noise.detune.setTargetAtTime(this.pitchBendDepth * e.value, safeNow(), 0.0001);
       }
       this.midiInput.addListener("pitchbend", pitchBend.bind(this));
 
       function controlChange(e) {
         const ctx = getAudioContext();
         if (e.subtype === "modulationwheelcoarse") {
-          this.monophone.vibratoDepth.setTargetAtTime(100 * e.value, ctx.currentTime, 0.005);
-          this.noise.jitter.setTargetAtTime(e.value * 0.75, ctx.currentTime, 0.005);
+          this.monophone.vibratoDepth.setTargetAtTime(100 * e.value, safeNow(), 0.005);
+          this.noise.jitter.setTargetAtTime(e.value * 0.75, safeNow(), 0.005);
         }
       }
       this.midiInput.addListener("controlchange", controlChange.bind(this));

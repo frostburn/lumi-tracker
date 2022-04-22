@@ -93,6 +93,26 @@ class Bit {
   }
 }
 
+class Logistic {
+  constructor(r=4) {
+    this.x = Math.random();
+    this.r = r;
+  }
+
+  step() {
+    this.x = this.r * this.x * (1 - this.x);
+    if (isNaN(this.x) || this.x <= 0 || this.x >= 1) {
+      this.x = Math.random();
+    }
+    // Roughly normalize to [-1, 1] range for r > 3.55
+    // TODO: Improve and simplify
+    const u = (this.r - 3.55) / (4 - 3.55);
+    const xMax = 0.888 + u*(1 - 0.888);
+    const xMin = 0.354 - u*0.354 + u*(1-u)*0.097;
+    return 2*(this.x - xMin) / (xMax - xMin) - 1;
+  }
+}
+
 class Noise extends AudioWorkletProcessor {
 
   // Static getter to define AudioParam objects in this custom processor.
@@ -124,11 +144,13 @@ class Noise extends AudioWorkletProcessor {
     this.finite = new Finite();
     this.balanced = new Balanced();
     this.bit = new Bit();
+    this.logistic = new Logistic();
     this.alternating = 1;
 
     this.jitterFinite = new Finite();
     this.jitterBalanced = new Balanced();
     this.jitterBit = new Bit();
+    this.jitterLogistic = new Logistic();
     this.jitterAlternating = 1;
 
     this.diffs = [];
@@ -211,6 +233,8 @@ class Noise extends AudioWorkletProcessor {
         this.model = this.finite.step.bind(this.finite);
       } else if (data.value === "bit") {
         this.model = this.bit.step.bind(this.bit);
+      } else if (data.value === "logistic") {
+        this.model = this.logistic.step.bind(this.logistic);
       } else if (data.value === "alternating") {
         this.model = () => { this.alternating = -this.alternating; return this.alternating; };
       } else {
@@ -229,6 +253,8 @@ class Noise extends AudioWorkletProcessor {
         this.jitterModel = this.jitterFinite.step.bind(this.jitterFinite);
       } else if (data.value === "bit") {
         this.jitterModel = this.jitterBit.step.bind(this.jitterBit);
+      } else if (data.value === "logistic") {
+        this.jitterModel = this.jitterLogistic.step.bind(this.jitterLogistic);
       } else if (data.value === "alternating") {
         this.jitterModel = () => { this.jitterAlternating = -this.jitterAlternating; return this.jitterAlternating };
       } else {
@@ -242,12 +268,16 @@ class Noise extends AudioWorkletProcessor {
       this.finite.seed = data.value;
     } else if (data.type === "bitDepth") {
       this.bit.depth = data.value;
+    } else if (data.type === "logisticR") {
+      this.logistic.r = data.value;
     } else if (data.type === "jitterFiniteLength") {
       this.jitterFinite.length = data.value;
     } else if (data.type === "jitterFiniteSeed") {
       this.jitterFinite.seed = data.value;
     } else if (data.type === "jitterBitDepth") {
       this.jitterBit.depth = data.value;
+    } else if (data.type === "jitterLogisticR") {
+      this.jitterLogistic.r = data.value;
     } else if (data.type === "diffStages") {
       this.diffs = Array(data.value).fill(0);
       for (let i = 0; i < data.value; ++i) {

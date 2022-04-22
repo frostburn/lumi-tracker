@@ -1,7 +1,8 @@
 // TODO: Unify: jitter = timbre, nats -> cents
 
 const PROGRAMS = {
-    P0: {  // Default
+    P0: {
+        name: "Default",
         amplitude: {
             linear: false,
             data: [100],
@@ -15,7 +16,8 @@ const PROGRAMS = {
             data: [0],
         },
     },
-    PS: { // Noise - Snare
+    PS: {
+        name: "Snare",
         amplitude: {
             data: [100, 90, 50, 20, 15, 20, 10, 5, 3, 2, 1, 0],
         },
@@ -28,8 +30,11 @@ const PROGRAMS = {
     },
 };
 
-Object.values(PROGRAMS).forEach(instrument => {
-    Object.values(instrument).forEach(table => {
+Object.values(PROGRAMS).forEach(program => {
+    Object.entries(program).forEach(([parameter, table]) => {
+        if (parameter === "name") {
+            return;
+        }
         if (table.linear === undefined) {
             table.linear = true;
         }

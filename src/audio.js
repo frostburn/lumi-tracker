@@ -210,13 +210,13 @@ function createWaveforms() {
     });
 }
 
-export function playFrequencies(cells, instrument, beatDuration) {
+export function playFrequencies(cells, instrument, beatDuration, destination) {
     const ctx = getAudioContext();
     const oscillator = obtainOscillator(instrument.waveform);
     oscillator.frequency.setValueAtTime(1000, ctx.currentTime);
     const amplitude = ctx.createGain();
     amplitude.gain.setValueAtTime(0.0, ctx.currentTime);
-    oscillator.connect(amplitude).connect(ctx.destination);
+    oscillator.connect(amplitude).connect(destination);
     let lastFrequency = null;
     let time = safeNow();
     cells.forEach(cell => {
@@ -256,7 +256,7 @@ export class Monophone {
         this.detune = this.pitchBend.offset;
         this.envelope = ctx.createGain();
         this.envelope.gain.setValueAtTime(0, ctx.currentTime);
-        this.oscillator.connect(this.envelope).connect(ctx.destination);
+        this.oscillator.connect(this.envelope);
 
         this.vibratoGain = ctx.createGain();
         this.vibratoDepth = this.vibratoGain.gain;
@@ -268,6 +268,10 @@ export class Monophone {
 
         this.stack = [];
         this.stackDepletionTime = -10000;
+    }
+
+    connect(destination) {
+        return this.envelope.connect(destination);
     }
 
     dispose() {
@@ -282,7 +286,7 @@ export class Monophone {
         const ctx = getAudioContext();
         const now = safeNow();
         this.envelope.gain.cancelScheduledValues(now);
-        this.envelope.gain.setTargetAtTime(0.5*velocity, now, this.amplitudeGlide);
+        this.envelope.gain.setTargetAtTime(velocity, now, this.amplitudeGlide);
         if (this.stack.length) {
             this.oscillator.detune.setTargetAtTime(cents, now, this.frequencyGlide);
         } else {
@@ -317,7 +321,7 @@ export class Monophone {
                 }
                 const topVoice = this.stack[this.stack.length - 1];
                 this.oscillator.detune.setTargetAtTime(topVoice.cents, then, this.frequencyGlide);
-                this.envelope.gain.setTargetAtTime(0.5*topVoice.velocity, then, this.amplitudeGlide);
+                this.envelope.gain.setTargetAtTime(topVoice.velocity, then, this.amplitudeGlide);
             } else {
                 this.stack.splice(this.stack.indexOf(voice), 1);
             }
@@ -344,7 +348,7 @@ export class Noise {
         this.detune = this.pitchBend.offset;
         this.envelope = ctx.createGain();
         this.envelope.gain.setValueAtTime(0, ctx.currentTime);
-        this.generator.connect(this.envelope).connect(ctx.destination);
+        this.generator.connect(this.envelope);
 
         this.vibratoGain = ctx.createGain();
         this.vibratoDepth = this.vibratoGain.gain;
@@ -382,6 +386,10 @@ export class Noise {
         this.release = data.release;
     }
 
+    connect(destination) {
+        return this.envelope.connect(destination);
+    }
+
     dispose() {
         disposeNoise(this.generator);
         disposeOscillator(this.vibratoOscillator);
@@ -396,7 +404,6 @@ export class Noise {
         }
         this.lastTrackTime = when;
 
-        velocity *= 0.5; // TODO: Global gain
         const nats = Math.log(frequency);
         this.setConfig({type: "onset", when});
         this.envelope.gain.setTargetAtTime(velocity, when, this.attack);
@@ -419,7 +426,6 @@ export class Noise {
     }
 
     noteOn(frequency, velocity) {
-        velocity *= 0.5;  // TODO: Global gain
         const nats = Math.log(frequency);
         const ctx = getAudioContext();
         const now = safeNow();

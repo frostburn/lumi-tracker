@@ -29,6 +29,7 @@ export default {
   },
   data() {
     return {
+      globalGain: null,  // Initialized on mounting for convenience
       monophone: new Monophone("oddtheta3", 0.01, 0.02),
       noise: null,  // Can only be initialized on mounting
       activeInstrument: null,
@@ -315,10 +316,11 @@ export default {
             frequencyGlide: track.instrument.frequencyGlide / 1000,
             amplitudeGlide: track.instrument.amplitudeGlide / 1000,
           };
-          this.cancelCallbacks.push(playFrequencies(cells, instrument, this.beatDuration));
+          this.cancelCallbacks.push(playFrequencies(cells, instrument, this.beatDuration, this.globalGain));
         } else if (track.instrument.type === "noise") {
           const instrument = new Noise();
           this.configureNoise(instrument, track.instrument);
+          instrument.connect(this.globalGain);
 
           let currentProgram = null;
           let time = now;
@@ -829,6 +831,14 @@ export default {
     }
     await loadAudioWorklets();
     this.noise = new Noise();
+
+    const ctx = getAudioContext();
+    this.globalGain = ctx.createGain();
+    this.globalGain.gain.setValueAtTime(0.4, ctx.currentTime);
+    this.globalGain.connect(ctx.destination);
+
+    this.monophone.connect(this.globalGain);
+    this.noise.connect(this.globalGain);
   },
   unmounted() {
     this.computerKeyboard.removeEventListener("keydown", this.computerKeydown);
@@ -838,6 +848,7 @@ export default {
     if (this.noise !== null) {
       this.noise.dispose();
     }
+    this.globalGain.disconnect();
     window.removeEventListener("mouseup", this.onMouseUp);
     window.removeEventListener("click", this.selectNothing);
     window.removeEventListener("keydown", this.windowKeydown);

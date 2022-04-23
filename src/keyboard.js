@@ -87,6 +87,9 @@ export class Keyboard {
     }
 
     keydown(event) {
+        if (event.ctrlKey) {
+            return;
+        }
         if (event.key == "Shift") {
             for (const code of this.activeKeys) {
                 this.pendingKeys.add(code);

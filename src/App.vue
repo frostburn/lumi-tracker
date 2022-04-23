@@ -62,6 +62,7 @@ export default {
       selectActive: false,
       selectStart: null,
       selectStop: null,
+      copied: null,
       song: {
         highlightPeriod: 4,
         baseFrequency: REFERENCE_FREQUENCY,
@@ -564,6 +565,25 @@ export default {
       }
       return true;
     },
+    copySelected() {
+      if (this.selection === undefined) {
+        return;
+      }
+      const copied = [];
+      this.song.tracks.slice(this.selection.left, this.selection.right + 1).forEach((track, i) => {
+        copied.push(track.patterns[this.activeFrame[this.selection.left + i]].slice(this.selection.top, this.selection.bottom + 1));
+      });
+      this.copied = this.fromJSON(this.toJSON(copied));
+    },
+    pasteCopied() {
+      if (this.activeColumn === null || this.activeRow === null || this.copied === null) {
+        return;
+      }
+      const copied = this.fromJSON(this.toJSON(this.copied));
+      this.song.tracks.slice(this.activeColumn, this.activeColumn + copied.length).forEach((track, i) => {
+        track.patterns[this.activeFrame[this.activeColumn + i]].splice(this.activeRow, copied[i].length, ...copied[i]);
+      });
+    },
     ignoreKeydown(event) {
       if (event?.target instanceof HTMLInputElement && event?.target?.type !== "range") {
         return true;
@@ -582,6 +602,12 @@ export default {
       }
       if (["ShiftLeft", "ShiftRight"].includes(event.code)) {
         this.activeComputerKeys.add(event.code);
+      }
+      if (event.ctrlKey && event.key === "c") {
+        this.copySelected();
+      }
+      if (event.ctrlKey && event.key === "v") {
+        this.pasteCopied();
       }
       if (event.code === "NumpadDivide") {
         this.octave--;
@@ -838,23 +864,29 @@ export default {
       this.activeInstrument = instrument;
       this.showInstrumentModal = true;
     },
-    saveLocalStorage() {
+    toJSON(data) {
       function replacer(key, value) {
         if (value === NOTE_OFF) {
           return "__NOTE_OFF";
         }
         return value;
       }
-      window.localStorage.lumiTrackerSong = JSON.stringify(this.song, replacer);
+      return JSON.stringify(data, replacer);
     },
-    loadLocalStorage() {
+    fromJSON(string) {
       function reviver(key, value) {
         if (value === "__NOTE_OFF") {
           return NOTE_OFF;
         }
         return value;
       }
-      this.song = JSON.parse(window.localStorage.lumiTrackerSong, reviver);
+      return JSON.parse(string, reviver);
+    },
+    saveLocalStorage() {
+      window.localStorage.lumiTrackerSong = this.toJSON(this.song);
+    },
+    loadLocalStorage() {
+      this.song = this.fromJSON(window.localStorage.lumiTrackerSong);
     },
   },
   async mounted() {

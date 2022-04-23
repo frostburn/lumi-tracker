@@ -1,7 +1,7 @@
 <script>
 export default {
     props: ['note', 'velocity', 'program', 'active', 'focused', 'inputMode', 'inputIndex', 'highlight'],
-    emits: ['cellClick'],
+    emits: ['cellClick', 'select'],
     computed: {
         hexVelocity() {
             if (isNaN(this.velocity)) {
@@ -28,14 +28,29 @@ export default {
             class="note"
             :class="{ focused: focused && inputMode === 'note' }"
             @click.stop="$emit('cellClick', 'note', 0)"
+            @mousedown.stop="$emit('select','start', 'note')"
+            @mousemove.stop="$emit('select', 'change', 'note')"
+            @mouseup.stop="$emit('select', 'stop', 'note')"
         >
             {{ note || "..." }}
         </td>
-        <td class="velocity" :class="{ focused: focused && inputMode === 'velocity' }">
+        <td
+            class="velocity"
+            :class="{ focused: focused && inputMode === 'velocity' }"
+            @mousedown.stop="$emit('select', 'start', 'velocity')"
+            @mousemove.stop="$emit('select', 'change', 'velocity')"
+            @mouseup.stop="$emit('select', 'stop', 'velocity')"
+        >
             <span :class="{ selected: inputIndex === 0 }" @click.stop="$emit('cellClick', 'velocity', 0)">{{ hexVelocity[0] }}</span>
             <span :class="{ selected: inputIndex === 1 }" @click.stop="$emit('cellClick', 'velocity', 1)">{{ hexVelocity[1] }}</span>
         </td>
-        <td class="program" :class="{ focused: focused && inputMode === 'program' }">
+        <td
+            class="program"
+            :class="{ focused: focused && inputMode === 'program' }"
+            @mousedown.stop="$emit('select','start', 'program')"
+            @mousemove.stop="$emit('select', 'change', 'program')"
+            @mouseup.stop="$emit('select','stop', 'program')"
+        >
             <span :class="{ selected: inputIndex === 0 }" @click.stop="$emit('cellClick', 'program', 0)">{{ normalizedProgram[0] }}</span>
             <span :class="{ selected: inputIndex === 1 }" @click.stop="$emit('cellClick', 'program', 1)">{{ normalizedProgram[1] }}</span>
         </td>

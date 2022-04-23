@@ -1,12 +1,13 @@
 <script>
 import TrackCell from "./TrackCell.vue";
 
+// TODO: Extend selection granularity to cell subcomponents
 export default {
     components: {
         TrackCell,
     },
-    props: ["cells", "active", "activeRow", "inputMode", "inputIndex", "highlightPeriod"],
-    emits: ["cellClick"],
+    props: ["cells", "active", "activeRow", "inputMode", "inputIndex", "highlightPeriod", "selected", "selection"],
+    emits: ["cellClick", "select"],
     methods: {
         scrollIntoView(options) {
             this.$refs.cells[this.activeRow || 0].scrollIntoView(options);
@@ -24,9 +25,11 @@ export default {
             :active="index === activeRow"
             :focused="active && index === activeRow"
             :highlight="index % highlightPeriod === 0"
+            :class="{ selected: selected && index >= selection?.top && index <= selection?.bottom }"
             :inputMode="inputMode"
             :inputIndex="inputIndex"
             @cellClick="(mode, i) => $emit('cellClick', mode, index, i)"
+            @select="(phase, mode) => $emit('select', phase, mode, index)"
         />
     </table>
 </template>
@@ -36,5 +39,9 @@ export default {
         float: left;
         background: black;
         border-collapse: collapse;
+    }
+
+    .selected {
+        background: #aaaaff;
     }
 </style>

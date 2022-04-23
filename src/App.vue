@@ -59,6 +59,9 @@ export default {
       inputMode: null,
       inputIndex: null,
       cancelRowCallback: null,
+      selectActive: false,
+      selectStart: null,
+      selectStop: null,
       song: {
         highlightPeriod: 4,
         baseFrequency: REFERENCE_FREQUENCY,
@@ -240,6 +243,17 @@ export default {
     },
     noiseModels() {
       return availableNoiseModels();
+    },
+    selection() {
+      if (this.selectStart === null || this.selectStop === null) {
+        return undefined;
+      }
+      return {
+        left: Math.min(this.selectStart.columnIndex, this.selectStop.columnIndex),
+        right: Math.max(this.selectStart.columnIndex, this.selectStop.columnIndex),
+        top: Math.min(this.selectStart.rowIndex, this.selectStop.rowIndex),
+        bottom: Math.max(this.selectStart.rowIndex, this.selectStop.rowIndex),
+      };
     },
   },
   methods: {
@@ -781,11 +795,34 @@ export default {
       this.activeRow = rowIndex;
       this.inputIndex = inputIndex;
       this.inputMode = mode;
+      this.selectStart = null;
+      this.selectStop = null;
+      this.selectActive = null;
     },
     selectNothing() {
       this.activeColumn = null;
       this.inputMode = null;
       this.inputIndex = null;
+      this.selectStart = null;
+      this.selectStop = null;
+      this.selectActive = null;
+    },
+    handleSelect(phase, mode, columnIndex, rowIndex) {
+      if (phase === "change" && !this.selectActive) {
+        return;
+      }
+      if (phase === "start") {
+        this.selectStart = { mode, columnIndex, rowIndex };
+        this.selectStop = null;
+        this.selectActive = true;
+      }
+      if (phase === "change") {
+        this.selectStop = { mode, columnIndex, rowIndex };
+      }
+      if (phase === "stop") {
+        this.selectStop = { mode, columnIndex, rowIndex };
+        this.selectActive = false;
+      }
     },
     choosePattern(pattern) {
       this.song.mosPattern = pattern;
@@ -823,7 +860,7 @@ export default {
   async mounted() {
     this.activeInstrument = this.song.tracks[0].instrument;
     window.addEventListener("mouseup", this.onMouseUp);
-    window.addEventListener("click", this.selectNothing);
+    window.addEventListener("mouseup", this.selectNothing);
     this.computerKeyboard = new Keyboard();
     this.computerKeyboard.addEventListener("keydown", this.computerKeydown);
     this.computerKeyboard.addEventListener("keyup", this.computerKeyup);
@@ -854,7 +891,7 @@ export default {
     }
     this.globalGain.disconnect();
     window.removeEventListener("mouseup", this.onMouseUp);
-    window.removeEventListener("click", this.selectNothing);
+    window.removeEventListener("mouseup", this.selectNothing);
     window.removeEventListener("keydown", this.windowKeydown);
     window.removeEventListener("keyup", this.windowKeyup);
     if (this.midiInput !== null) {
@@ -957,7 +994,10 @@ export default {
       :inputMode="inputMode"
       :inputIndex="inputIndex"
       :highlightPeriod="song.highlightPeriod"
+      :selected="index >= selection?.left && index <= selection?.right"
+      :selection="selection"
       @cellClick="(mode, i, j) => selectSingle(mode, index, i, j)"
+      @select="(phase, mode, i) => handleSelect(phase, mode, index, i)"
     />
   </div>
   <div class="break"/>

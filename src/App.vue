@@ -742,10 +742,25 @@ export default {
     addTrack() {
       this.song.tracks.push({
         instrument: {
-          monophonic: true,
-          waveform: 'theta4',
-          frequencyGlide: 10,
-          amplitudeGlide: 20,
+          type: 'noise',
+          frequencyGlide: 1,
+          attack: 1,
+          release: 2,
+          model: 'uniform',
+          jitterModel: 'balanced',
+          jitterType: 'pulseWidth',
+          bitDepth: 1,
+          finiteLength: 8,
+          finiteSeed: 0,
+          logisticR: 4,
+          jitterBitDepth: 1,
+          jitterFiniteLength: 8,
+          jitterFiniteSeed: 0,
+          jitterLogisticR: 4,
+          diffStages: 0,
+          linear: false,
+          underSampling: 1,
+          tableDelta: 20,
         },
         patterns: [
           Array(this.song.tracks[0].patterns[0].length).fill(null),
@@ -761,22 +776,11 @@ export default {
       const newPattern = this.song.frames.length;
       this.song.frames.push(Array(this.song.tracks.length).fill(newPattern));
     },
-    selectNote(columnIndex, rowIndex) {
-      this.activeColumn = columnIndex;
-      this.activeRow = rowIndex;
-      this.inputMode = "note";
-    },
-    selectVelocity(columnIndex, rowIndex, inputIndex) {
+    selectSingle(mode, columnIndex, rowIndex, inputIndex) {
       this.activeColumn = columnIndex;
       this.activeRow = rowIndex;
       this.inputIndex = inputIndex;
-      this.inputMode = "velocity";
-    },
-    selectProgram(columnIndex, rowIndex, inputIndex) {
-      this.activeColumn = columnIndex;
-      this.activeRow = rowIndex;
-      this.inputIndex = inputIndex;
-      this.inputMode = "program";
+      this.inputMode = mode;
     },
     selectNothing() {
       this.activeColumn = null;
@@ -953,9 +957,7 @@ export default {
       :inputMode="inputMode"
       :inputIndex="inputIndex"
       :highlightPeriod="song.highlightPeriod"
-      @noteClick="(i) => selectNote(index, i)"
-      @velocityClick="(i, j) => selectVelocity(index, i, j)"
-      @programClick="(i, j) => selectProgram(index, i, j)"
+      @cellClick="(mode, i, j) => selectSingle(mode, index, i, j)"
     />
   </div>
   <div class="break"/>
@@ -998,6 +1000,7 @@ export default {
   width: 900px;
   height: 600px;
   overflow: scroll;
+  user-select: none;
 }
 
 .input-column {

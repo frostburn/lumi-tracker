@@ -1,7 +1,7 @@
 <script>
 export default {
     props: ['note', 'velocity', 'program', 'active', 'focused', 'inputMode', 'inputIndex', 'highlight'],
-    emits: ['noteClick', 'velocityClick', 'programClick'],
+    emits: ['cellClick'],
     computed: {
         hexVelocity() {
             if (isNaN(this.velocity)) {
@@ -27,17 +27,17 @@ export default {
             ref="note"
             class="note"
             :class="{ focused: focused && inputMode === 'note' }"
-            @click.stop="$emit('noteClick')"
+            @click.stop="$emit('cellClick', 'note', 0)"
         >
             {{ note || "..." }}
         </td>
         <td class="velocity" :class="{ focused: focused && inputMode === 'velocity' }">
-            <span :class="{ selected: inputIndex === 0 }" @click.stop="$emit('velocityClick', 0)">{{ hexVelocity[0] }}</span>
-            <span :class="{ selected: inputIndex === 1 }" @click.stop="$emit('velocityClick', 1)">{{ hexVelocity[1] }}</span>
+            <span :class="{ selected: inputIndex === 0 }" @click.stop="$emit('cellClick', 'velocity', 0)">{{ hexVelocity[0] }}</span>
+            <span :class="{ selected: inputIndex === 1 }" @click.stop="$emit('cellClick', 'velocity', 1)">{{ hexVelocity[1] }}</span>
         </td>
         <td class="program" :class="{ focused: focused && inputMode === 'program' }">
-            <span :class="{ selected: inputIndex === 0 }" @click.stop="$emit('programClick', 0)">{{ normalizedProgram[0] }}</span>
-            <span :class="{ selected: inputIndex === 1 }" @click.stop="$emit('programClick', 1)">{{ normalizedProgram[1] }}</span>
+            <span :class="{ selected: inputIndex === 0 }" @click.stop="$emit('cellClick', 'program', 0)">{{ normalizedProgram[0] }}</span>
+            <span :class="{ selected: inputIndex === 1 }" @click.stop="$emit('cellClick', 'program', 1)">{{ normalizedProgram[1] }}</span>
         </td>
     </tr>
 </template>

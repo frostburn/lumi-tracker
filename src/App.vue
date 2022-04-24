@@ -15,7 +15,7 @@ import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
 import PROGRAMS from "./presets/programs.js";
 
-const COLUMN_HEIGHT = 64;
+const DEFAULT_COLUMN_HEIGHT = 64;
 
 export default {
   components: {
@@ -71,7 +71,8 @@ export default {
         l: 2,
         s: 1,
         equave: 2,
-        frames: [[0, 0], [1, 1]],
+        frames: [[0, 0]],
+        columnHeight: DEFAULT_COLUMN_HEIGHT,
         tracks: [
           {
             instrument: {
@@ -81,8 +82,7 @@ export default {
               amplitudeGlide: 20,
             },
             patterns: [
-              Array(COLUMN_HEIGHT).fill(null),
-              Array(COLUMN_HEIGHT).fill(null),
+              Array(DEFAULT_COLUMN_HEIGHT).fill(null),
             ],
           },
           {
@@ -108,8 +108,7 @@ export default {
               tableDelta: 20,
             },
             patterns: [
-              Array(COLUMN_HEIGHT).fill(null),
-              Array(COLUMN_HEIGHT).fill(null),
+              Array(DEFAULT_COLUMN_HEIGHT).fill(null),
             ],
           },
         ]
@@ -145,7 +144,26 @@ export default {
       if (newValue in PROGRAMS) {
         this.noise.setProgram(PROGRAMS[newValue]);
       }
-    }
+    },
+    'song.columnHeight': {
+      handler(newValue) {
+        if (newValue < 1) {
+          this.song.columnHeight = 1;
+          return;
+        }
+        if (newValue > 256) {
+          this.song.columnHeight = 256;
+          return;
+        }
+        this.song.tracks.forEach(track => {
+          track.patterns.forEach(pattern => {
+            while (pattern.length < newValue) {
+              pattern.push(null);
+            }
+          });
+        });
+      },
+    },
   },
   computed: {
     countL() {
@@ -206,7 +224,7 @@ export default {
     cellsWithNotes() {
       const result = [];
       this.song.tracks.forEach((track, i) => {
-        const cells = track.patterns[this.activeFrame[i]];
+        const cells = track.patterns[this.activeFrame[i]].slice(0, this.song.columnHeight);
         result.push(cells.map(cell => {
           if (cell === null) {
             return {note: "", velocity: NaN};
@@ -225,9 +243,6 @@ export default {
     },
     activeCells() {
       return this.song.tracks[this.activeColumn].patterns[this.activeFrame[this.activeColumn]];
-    },
-    columnHeight() {
-      return this.song.tracks[0].patterns[this.activeFrame[0]].length;
     },
     beatDuration() {
       return 60 / this.song.beatsPerMinute;
@@ -317,10 +332,10 @@ export default {
       this.song.tracks.forEach((track, i) => {
         let cells = [];
         if (extent === "frame") {
-          cells = track.patterns[this.activeFrame[i]];
+          cells = track.patterns[this.activeFrame[i]].slice(0, this.song.columnHeight);
         } else if (extent === "song") {
           this.song.frames.forEach(frame => {
-            cells = cells.concat(track.patterns[frame[i]]);
+            cells = cells.concat(track.patterns[frame[i]].slice(0, this.song.columnHeight));
           });
         }
         if (track.instrument.type === "monophone") {
@@ -351,6 +366,7 @@ export default {
             }
             time += this.beatDuration;
           });
+          instrument.trackNoteOff(time);
 
           this.cancelCallbacks.push(instrument.dispose.bind(instrument));
         }
@@ -430,7 +446,7 @@ export default {
           return this.noise.noteOn(frequency, velocity / 0xFF);
         }
       } else if (this.inputMode === "note" && this.activeRow !== null) {
-        if (this.activeRow >= 0 && this.activeRow < this.columnHeight) {
+        if (this.activeRow >= 0 && this.activeRow < this.song.columnHeight) {
           this.activeCells[this.activeRow] = { monzo, velocity, program: this.activeProgram };
           this.incrementRow();
           this.scrollIntoView();
@@ -543,18 +559,18 @@ export default {
           this.activeRow = 0;
         }
       } else if (delta > 0) {
-        if (this.activeRow >= this.columnHeight - 1) {
+        if (this.activeRow >= this.song.columnHeight - 1) {
           return false;
         }
         this.activeRow += delta;
-        if (this.activeRow >= this.columnHeight) {
-          this.activeRow = this.columnHeight - 1;
+        if (this.activeRow >= this.song.columnHeight) {
+          this.activeRow = this.song.columnHeight - 1;
         }
       }
       return true;
     },
     incrementRowOrFrame() {
-      if (this.activeRow >= this.columnHeight - 1) {
+      if (this.activeRow >= this.song.columnHeight - 1) {
         if (this.activeFrameIndex >= this.song.frames.length - 1) {
           return false;
         }
@@ -615,7 +631,7 @@ export default {
       if (event.code === "NumpadMultiply") {
         this.octave++;
       }
-      if (this.activeRow >= 0 && this.activeRow < this.columnHeight) {
+      if (this.activeRow >= 0 && this.activeRow < this.song.columnHeight) {
         if (this.inputMode === "note") {
           let result;
           let delta = 0;
@@ -780,7 +796,7 @@ export default {
       this.activeComputerKeys.delete(event.code);
     },
     addTrack() {
-      this.song.tracks.push({
+      const track = {
         instrument: {
           type: 'noise',
           frequencyGlide: 1,
@@ -802,16 +818,17 @@ export default {
           underSampling: 1,
           tableDelta: 20,
         },
-        patterns: [
-          Array(this.song.tracks[0].patterns[0].length).fill(null),
-          Array(this.song.tracks[0].patterns[1].length).fill(null),
-        ],
-      });
+        patterns: [],
+      };
+      while (track.patterns.length < this.song.frames.length) {
+        track.patterns.push(Array(this.song.columnHeight).fill(null));
+      }
+      this.song.tracks.push(track);
       this.song.frames.forEach((frame, i) => frame.push(i));
     },
     addFrame() {
       this.song.tracks.forEach(track => {
-        track.patterns.push(Array(this.columnHeight).fill(null));
+        track.patterns.push(Array(this.song.columnHeight).fill(null));
       });
       const newPattern = this.song.frames.length;
       this.song.frames.push(Array(this.song.tracks.length).fill(newPattern));
@@ -976,6 +993,9 @@ export default {
     <button @click="addFrame">add frame</button>
     <label for="velocity"> Velocity: </label>
     <input id="velocity" v-model="velocity" type="number" min="0" max="255" />
+
+    <label for="column-height"> Rows: </label>
+    <input id="column-height" v-model="song.columnHeight" type="number" min="1" max="256">
   </div>
   <div class="break"/>
   <div>
@@ -1013,7 +1033,7 @@ export default {
   </table>
   <div class="track-container">
     <TrackRowLabels
-      :numRows="columnHeight"
+      :numRows="song.columnHeight"
       @click="(i) => activeRow = i"
       :highlightPeriod="song.highlightPeriod"
     />

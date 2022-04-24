@@ -229,7 +229,7 @@ export function playFrequencies(cells, instrument, beatDuration, destination) {
             }
         }
         lastFrequency = cell.frequency;
-        amplitude.gain.setTargetAtTime(cell.velocity*0.25, time, instrument.amplitudeGlide);
+        amplitude.gain.setTargetAtTime(cell.velocity, time, instrument.amplitudeGlide);
         time += beatDuration;
     });
     amplitude.gain.setTargetAtTime(0.0, time, instrument.amplitudeGlide);

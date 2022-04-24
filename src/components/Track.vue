@@ -9,8 +9,11 @@ export default {
     props: ["cells", "active", "activeRow", "inputMode", "inputIndex", "highlightPeriod", "selected", "selection"],
     emits: ["cellClick", "select"],
     methods: {
-        scrollIntoView(options) {
-            this.$refs.cells[this.activeRow || 0].scrollIntoView(options);
+        scrollIntoView(rowIndex, options) {
+            if (rowIndex === undefined) {
+                rowIndex = this.activeRow || 0;
+            }
+            this.$refs.cells[rowIndex].scrollIntoView(options);
         },
     },
 }

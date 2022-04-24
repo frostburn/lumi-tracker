@@ -303,7 +303,13 @@ export default {
       this.playing = false;
       this.activeRow = null;
     },
-    scrollIntoView(options) {
+    scrollIntoView(columnIndex, rowIndex, options) {
+      if (columnIndex === undefined) {
+        columnIndex = this.activeColumn || 0;
+      }
+      if (rowIndex === undefined) {
+        rowIndex = this.activeRow || 0;
+      }
       if (options === undefined) {
         options = {
           behavior: "auto",
@@ -312,8 +318,8 @@ export default {
         };
       }
       this.$nextTick().then(() => {
-        const trackComponent = this.$refs.tracks[this.activeColumn || 0];
-        trackComponent.scrollIntoView(options);
+        const trackComponent = this.$refs.tracks[columnIndex];
+        trackComponent.scrollIntoView(rowIndex, options);
       });
     },
     configureNoise(noise, instrument) {
@@ -390,7 +396,7 @@ export default {
             return;
           }
         }
-        this.scrollIntoView({
+        this.scrollIntoView(undefined, undefined, {
           behavior: "auto",
           block: "center",
           inline: "center",
@@ -861,6 +867,11 @@ export default {
       }
       if (phase === "change") {
         this.selectStop = { mode, columnIndex, rowIndex };
+        if (this.selectStart.rowIndex < rowIndex) {
+          this.scrollIntoView(columnIndex, Math.min(this.song.columnHeight - 1, rowIndex + 1));
+        } else {
+          this.scrollIntoView(columnIndex, Math.max(0, rowIndex - 1));
+        }
       }
       if (phase === "stop") {
         this.selectStop = { mode, columnIndex, rowIndex };

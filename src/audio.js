@@ -1,5 +1,6 @@
 import { ratioToCents } from "./util.js";
 import PROGRAMS from "./presets/programs.js";
+import noiseWorkletURL from "/src/worklets/noise.js?url"
 
 let AUDIO_CTX;
 // WebAudio API especially on Firefox doesn't perfectly sync AUDIO_CTX.currentTime
@@ -45,7 +46,7 @@ export function getAudioContext() {
 export async function loadAudioWorklets() {
     const ctx = getAudioContext();
     // Relative to index.html
-    await ctx.audioWorklet.addModule('./src/worklets/noise.js');
+    await ctx.audioWorklet.addModule(noiseWorkletURL);
 }
 
 export function suspendAudio() {

@@ -1,8 +1,8 @@
+import BaseProcessor from "./base.js";
 import { getTableValue } from "../lib/table.js";
 import { softSemisine, softSawtooth, softTriangle, softSquare } from "../lib/waveform/soft.js";
 
-// TODO: TableWorklet superclass
-class Monophone extends AudioWorkletProcessor {
+class Monophone extends BaseProcessor {
 
   // Static getter to define AudioParam objects in this custom processor.
   static get parameterDescriptors() {
@@ -20,12 +20,8 @@ class Monophone extends AudioWorkletProcessor {
 
   constructor() {
     super();
-    // Time since last onset
-    this.tOnset = 0;
     // Oscillator phase
     this.phase = 0;
-    // Inverse speed of parameter change
-    this.tableDelta = 0.02;
 
     this.waveform = softSemisine;
 
@@ -46,41 +42,14 @@ class Monophone extends AudioWorkletProcessor {
         data: [0],
       },
     }
-
-    this.messages = [];
-    this.port.onmessage = this.onMessage.bind(this);
-  }
-
-  onMessage(msg) {
-    const when = msg.data.when;
-    if (when === undefined) {
-      this.applyMessage(msg);
-    } else {
-      this.messages.push([when, msg]);
-      this.messages.sort((a, b) => a[0] - b[0]);
-    }
-  }
-
-  triggerMessages(t) {
-    while (this.messages.length && this.messages[0][0] <= t) {
-      const [when, msg] = this.messages.shift();
-      this.applyMessage(msg);
-    }
   }
 
   applyMessage(msg) {
+    if (super.applyMessage(msg)) {
+      return;
+    }
     const data = msg.data;
-    if (data.type === "onset") {
-      this.tOnset = 0;
-    } else if (data.type === "cancel") {
-      this.messages = [];
-    } else if (data.type === "tableDelta") {
-      this.tableDelta = data.value;
-    } else if (data.type === "tables") {
-      this.tables = data.value;
-    } else if (data.type === "table") {
-      this.tables[data.subtype] = data.value;
-    } else if (data.type === "waveform") {
+    if (data.type === "waveform") {
       if (data.value === "semisine") {
         this.waveform = softSemisine;
       } else if (data.value === "sawtooth") {
@@ -97,16 +66,14 @@ class Monophone extends AudioWorkletProcessor {
     }
   }
 
-  process(inputs, outputs, parameters) {
+  processMono(channel, parameters) {
     let t = currentTime;
-    const output = outputs[0];
 
     const natValues = parameters.nat;
     const timbreValues = parameters.timbre;
 
     const dt = 1 / sampleRate;
 
-    const channel = output[0];
     for (let i = 0; i < channel.length; i++) {
       this.triggerMessages(t);
       const x = this.tOnset / this.tableDelta;
@@ -131,14 +98,6 @@ class Monophone extends AudioWorkletProcessor {
       this.phase += dp;
       this.phase -= Math.floor(this.phase);  // Not strictly needed, but improves accuracy
     }
-
-    for (let j = 1; j < output.length; ++j) {
-      for (let i = 0; i < channel.length; ++i) {
-        output[j][i] = channel[i];
-      }
-    }
-
-    return true;
   }
 }
 

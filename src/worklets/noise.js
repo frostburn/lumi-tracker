@@ -1,3 +1,4 @@
+import BaseProcessor from "./base.js";
 import JKISS31 from "../lib/jkiss.js";
 import { getTableValue } from "../lib/table.js";
 
@@ -113,7 +114,7 @@ class Logistic {
   }
 }
 
-class Noise extends AudioWorkletProcessor {
+class Noise extends BaseProcessor {
 
   // Static getter to define AudioParam objects in this custom processor.
   static get parameterDescriptors() {
@@ -131,12 +132,8 @@ class Noise extends AudioWorkletProcessor {
 
   constructor() {
     super();
-    // Time since last onset
-    this.tOnset = 0;
     // Normalized time since last value change
     this.phase = 0;
-    // Inverse speed of parameter change
-    this.tableDelta = 0.02;
 
     this.model = rand;
     this.jitterModel = rand;
@@ -187,40 +184,18 @@ class Noise extends AudioWorkletProcessor {
     this.port.onmessage = this.onMessage.bind(this);
   }
 
-  onMessage(msg) {
-    const when = msg.data.when;
-    if (when === undefined) {
-      this.applyMessage(msg);
-    } else {
-      this.messages.push([when, msg]);
-      this.messages.sort((a, b) => a[0] - b[0]);
-    }
-  }
-
-  triggerMessages(t) {
-    while (this.messages.length && this.messages[0][0] <= t) {
-      const [when, msg] = this.messages.shift();
-      this.applyMessage(msg);
-    }
-  }
-
   applyMessage(msg) {
     const data = msg.data;
     if (data.type === "onset") {
-      this.tOnset = 0;
       this.finite.reset();
       this.alternating = 1;
       this.jitterFinite.reset();
       this.jitterAlternating = 1;
-    } else if (data.type === "cancel") {
-      this.messages = [];
-    } else if (data.type === "tableDelta") {
-      this.tableDelta = data.value;
-    } else if (data.type === "tables") {
-      this.tables = data.value;
-    } else if (data.type === "table") {
-      this.tables[data.subtype] = data.value;
-    } else if (data.type === "model") {
+    }
+    if (super.applyMessage(msg)) {
+      return;
+    }
+    if (data.type === "model") {
       if (data.value === "uniform") {
         this.model = uniform;
       } else if (data.value === "triangular") {
@@ -305,16 +280,14 @@ class Noise extends AudioWorkletProcessor {
     this.y1 = newValue / (1 << this.diffs.length);  // Compensate for [-1, 1] range
   }
 
-  process(inputs, outputs, parameters) {
+  processMono(channel, parameters) {
     let t = currentTime;
-    const output = outputs[0];
 
     const natValues = parameters.nat;
     const jitterValues = parameters.jitter;
 
     const _dt = 1 / sampleRate;
 
-    const channel = output[0];
     for (let i = 0; i < channel.length; i++) {
       if (this.holdIndex === 0) {
         this.triggerMessages(t);
@@ -364,14 +337,6 @@ class Noise extends AudioWorkletProcessor {
       }
       this.holdIndex = (this.holdIndex + 1) % this.underSampling;
     }
-
-    for (let j = 1; j < output.length; ++j) {
-      for (let i = 0; i < channel.length; ++i) {
-        output[j][i] = channel[i];
-      }
-    }
-
-    return true;
   }
 }
 

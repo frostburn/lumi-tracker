@@ -1,6 +1,7 @@
 import { ratioToCents } from "./util.js";
 import PROGRAMS from "./presets/programs.js";
 import noiseWorkletURL from "/src/worklets/noise.js?url"
+import monophoneWorkletURL from "/src/worklets/monophone.js?url"
 
 let AUDIO_CTX;
 // WebAudio API especially on Firefox doesn't perfectly sync AUDIO_CTX.currentTime
@@ -12,22 +13,27 @@ let AUDIO_DELAY = 0.0;
 const OSCILLATOR_BANK = [];
 // Not sure about AudioWorkletNode either so let's play it safe and bank them as well.
 const NOISE_BANK = [];
+const MONOPHONE_BANK = [];
 
-const DEFAULT_WAVEFORMS = ["sine", "square", "sawtooth", "triangle"];
+const DEFAULT_OSCILLATOR_WAVEFORMS = ["sine", "square", "sawtooth", "triangle"];
 const PERIODIC_WAVES = {};
 
-export function availableWaveforms() {
-    const result = Object.keys(PERIODIC_WAVES).concat(DEFAULT_WAVEFORMS);
+export function availableOscillatorWaveforms() {
+    const result = Object.keys(PERIODIC_WAVES).concat(DEFAULT_OSCILLATOR_WAVEFORMS);
     result.sort();
     return result;
+}
+
+export function availableWaveforms() {
+    return ["semisine", "square", "sawtooth", "triangle"];
 }
 
 export function availableNoiseModels() {
     return ["uniform", "triangular", "normal", "balanced", "bit", "finite", "logistic", "alternating", "built-in"];
 }
 
-export function setWaveform(oscillator, waveform) {
-    if (DEFAULT_WAVEFORMS.includes(waveform)) {
+export function setOscillatorWaveform(oscillator, waveform) {
+    if (DEFAULT_OSCILLATOR_WAVEFORMS.includes(waveform)) {
         oscillator.type = waveform;
     } else {
         oscillator.setPeriodicWave(PERIODIC_WAVES[waveform]);
@@ -47,6 +53,7 @@ export async function loadAudioWorklets() {
     const ctx = getAudioContext();
     // Relative to index.html
     await ctx.audioWorklet.addModule(noiseWorkletURL);
+    await ctx.audioWorklet.addModule(monophoneWorkletURL);
 }
 
 export function suspendAudio() {
@@ -77,7 +84,7 @@ function obtainOscillator(waveform="sine") {
         oscillator = ctx.createOscillator();
         oscillator.start(ctx.currentTime);
     }
-    setWaveform(oscillator, waveform);
+    setOscillatorWaveform(oscillator, waveform);
     return oscillator;
 }
 
@@ -130,6 +137,33 @@ function disposeNoise(noise) {
     noise.parameters.get("jitter").cancelScheduledValues(ctx.currentTime);
     noise.disconnect();
     NOISE_BANK.push(noise);
+}
+
+function obtainMonophone(
+        waveform="semisine", tableDelta=0.02, tables=PROGRAMS.P0,
+    ) {
+    const ctx = getAudioContext();
+    let monophone;
+    if (MONOPHONE_BANK.length) {
+        monophone = MONOPHONE_BANK.pop();
+    } else {
+        monophone = new AudioWorkletNode(ctx, "monophone");
+    }
+    monophone.parameters.get("timbre").setValueAtTime(0, ctx.currentTime);
+    monophone.port.postMessage({ type: "waveform", value: waveform });
+    monophone.port.postMessage({ type: "tableDelta", value: tableDelta });
+    monophone.port.postMessage({ type: "tables", value: tables });
+
+    return monophone;
+}
+
+function disposeMonophone(monophone) {
+    const ctx = getAudioContext();
+    monophone.port.postMessage({type: "cancel"});
+    monophone.parameters.get("nat").cancelScheduledValues(ctx.currentTime);
+    monophone.parameters.get("timbre").cancelScheduledValues(ctx.currentTime);
+    monophone.disconnect();
+    MONOPHONE_BANK.push(monophone);
 }
 
 export function scheduleAction(when, action) {
@@ -244,7 +278,7 @@ export function playFrequencies(cells, instrument, beatDuration, destination) {
     return cancel;
 }
 
-export class Monophone {
+export class Miniphone {
     constructor(waveform="triangle", frequencyGlide=0.009, amplitudeGlide=0.005) {
         this.frequencyGlide = frequencyGlide;
         this.amplitudeGlide = amplitudeGlide;
@@ -393,6 +427,151 @@ export class Noise {
 
     dispose() {
         disposeNoise(this.generator);
+        disposeOscillator(this.vibratoOscillator);
+        this.pitchBend.disconnect();
+        this.pitchBend.stop();
+        this.envelope.disconnect();
+    }
+
+    trackNoteOn(frequency, velocity, when) {
+        if (when < this.lastTrackTime) {
+            throw "Causality error during tracking";
+        }
+        this.lastTrackTime = when;
+
+        const nats = Math.log(frequency);
+        this.setConfig({type: "onset", when});
+        this.envelope.gain.setTargetAtTime(velocity, when, this.attack);
+        if (this.trackPlaying) {
+            this.generator.parameters.get("nat").setTargetAtTime(nats, when, this.frequencyGlide);
+        } else {
+            this.generator.parameters.get("nat").setValueAtTime(nats, when);
+            this.trackPlaying = true;
+        }
+    }
+
+    trackNoteOff(when) {
+        if (when < this.lastTrackTime) {
+            throw "Causality error during tracking";
+        }
+        this.lastTrackTime = when;
+
+        this.envelope.gain.setTargetAtTime(0, when, this.release);
+        this.trackPlaying = false;
+    }
+
+    noteOn(frequency, velocity) {
+        const nats = Math.log(frequency);
+        const ctx = getAudioContext();
+        const now = safeNow();
+        this.setConfig({type: "onset", when: now});
+        this.envelope.gain.cancelScheduledValues(now);
+        this.envelope.gain.setTargetAtTime(velocity, now, this.attack);
+        if (this.stack.length) {
+            this.generator.parameters.get("nat").setTargetAtTime(nats, now, this.frequencyGlide);
+        } else {
+            const decayDuration = now - this.stackDepletionTime;
+            const releaseDuration = this.release * 1.75;
+            if (decayDuration < releaseDuration) {
+                this.generator.parameters.get("nat").setTargetAtTime(
+                    nats,
+                    now,
+                    Math.min(this.frequencyGlide, releaseDuration - decayDuration) * 0.5
+                );
+            } else {
+                this.generator.parameters.get("nat").setValueAtTime(nats, now);
+            }
+        }
+        const id = Symbol();
+        const voice = {nats, velocity, id};
+        this.stack.push(voice);
+
+        function noteOff() {
+            const then = safeNow();
+            if (!this.stack.length) {
+                console.warn("Note off with an empty stack");
+                this.envelope.gain.setTargetAtTime(0, then, this.release);
+            }
+            if (this.stack[this.stack.length - 1].id === id) {
+                this.stack.pop();
+                if (!this.stack.length) {
+                    this.envelope.gain.setTargetAtTime(0, then, this.release);
+                    this.stackDepletionTime = then;
+                    return;
+                }
+                const topVoice = this.stack[this.stack.length - 1];
+                this.generator.parameters.get("nat").setTargetAtTime(topVoice.nats, then, this.frequencyGlide);
+                this.envelope.gain.setTargetAtTime(topVoice.velocity, then, this.attack);
+            } else {
+                this.stack.splice(this.stack.indexOf(voice), 1);
+            }
+        }
+
+        return noteOff.bind(this);
+    }
+}
+
+// TODO: Monophone super class
+export class Monophone {
+    constructor(frequencyGlide=0.001, attack=0.001, release=0.001) {
+        this.frequencyGlide = frequencyGlide;
+        this.attack = attack;
+        this.release = release;
+        const ctx = getAudioContext();
+        this.generator = obtainMonophone();
+        this.timbre = this.generator.parameters.get("timbre");
+        this._centsToNats = ctx.createGain();
+        this._centsToNats.gain.setValueAtTime(Math.log(2)/1200, ctx.currentTime);
+        this.pitchBend = ctx.createConstantSource();
+        this.pitchBend.start(ctx.currentTime);
+        this.pitchBend.connect(this._centsToNats).connect(this.generator.parameters.get("nat"));
+        this.detune = this.pitchBend.offset;
+        this.envelope = ctx.createGain();
+        this.envelope.gain.setValueAtTime(0, ctx.currentTime);
+        this.generator.connect(this.envelope);
+
+        this.vibratoGain = ctx.createGain();
+        this.vibratoDepth = this.vibratoGain.gain;
+        this.vibratoDepth.setValueAtTime(0, ctx.currentTime);
+        this.vibratoOscillator = obtainOscillator();
+        this.vibratoOscillator.connect(this.vibratoGain).connect(this._centsToNats);
+        this.vibratoFrequency = this.vibratoOscillator.frequency;
+        this.vibratoFrequency.setValueAtTime(7, ctx.currentTime);
+
+        this.stack = [];
+        this.stackDepletionTime = -10000;
+
+        this.trackPlaying = false;
+        this.lastTrackTime = -10000;
+    }
+
+    setConfig(config) {
+        this.generator.port.postMessage(config);
+    }
+
+    setProgram(program, when) {
+        this.setConfig({
+            type: "tables",
+            value: program,
+            when,
+        });
+    }
+
+    setFullConfig(data) {
+        ["waveform", "tableDelta"].forEach(type => {
+            this.setConfig({ type, value: data[type] });
+        });
+        this.frequencyGlide = data.frequencyGlide;
+        this.attack = data.attack;
+        this.release = data.release;
+    }
+
+    connect(destination) {
+        return this.envelope.connect(destination);
+    }
+
+    dispose() {
+        disposeMonophone(this.generator);
         disposeOscillator(this.vibratoOscillator);
         this.pitchBend.disconnect();
         this.pitchBend.stop();

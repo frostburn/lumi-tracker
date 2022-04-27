@@ -10,7 +10,7 @@ import InstrumentModal from "./components/InstrumentModal.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, REFERENCE_OCTAVE, ratioToCents, unicodeLength, unicodeSplit } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, setAudioDelay, safeNow } from "./audio.js";
-import { Monophone, availableWaveforms, setWaveform, loadAudioWorklets, Noise, availableNoiseModels } from "./audio.js";
+import { Monophone, availableWaveforms, loadAudioWorklets, Noise, availableNoiseModels } from "./audio.js";
 import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
 import PROGRAMS from "./presets/programs.js";
@@ -30,8 +30,8 @@ export default {
   data() {
     return {
       globalGain: null,  // Initialized on mounting for convenience
-      monophone: new Monophone("oddtheta3", 0.01, 0.02),
-      noise: null,  // Can only be initialized on mounting
+      monophone: null,  // Can only be initialized on mounting
+      noise: null,  // same
       activeInstrument: null,
       activeProgram: "P0",
       computerKeyboard: null,
@@ -77,9 +77,11 @@ export default {
           {
             instrument: {
               type: 'monophone',
-              waveform: 'oddtheta3',
-              frequencyGlide: 10,
-              amplitudeGlide: 20,
+              waveform: 'semisine',
+              frequencyGlide: 5,
+              attack: 10,
+              release: 20,
+              tableDelta: 20,
             },
             patterns: [
               Array(DEFAULT_COLUMN_HEIGHT).fill(null),
@@ -131,17 +133,16 @@ export default {
     activeInstrument: {
       handler(newValue) {
         if (newValue.type === 'monophone') {
-          setWaveform(this.monophone.oscillator, newValue.waveform);
-          this.monophone.frequencyGlide = newValue.frequencyGlide / 1000;
-          this.monophone.amplitudeGlide = newValue.amplitudeGlide / 1000;
+          this.configureInstrument(this.monophone, newValue);
         } else if (newValue.type === "noise") {
-          this.configureNoise(this.noise, newValue);
+          this.configureInstrument(this.noise, newValue);
         }
       },
       deep: true,
     },
     activeProgram(newValue) {
       if (newValue in PROGRAMS) {
+        this.monophone.setProgram(PROGRAMS[newValue]);
         this.noise.setProgram(PROGRAMS[newValue]);
       }
     },
@@ -322,14 +323,17 @@ export default {
         trackComponent.scrollIntoView(rowIndex, options);
       });
     },
-    configureNoise(noise, instrument) {
+    configureInstrument(instrument, spec) {
+      if (instrument === null) {
+        return;
+      }
       const data = {};
-      Object.assign(data, instrument);
+      Object.assign(data, spec);
       data.frequencyGlide /= 1000;
       data.attack /= 1000;
       data.release /= 1000;
       data.tableDelta /= 1000;
-      noise.setFullConfig(data);
+      instrument.setFullConfig(data);
     },
     play(extent) {
       this.cancelPlay();
@@ -344,38 +348,32 @@ export default {
             cells = cells.concat(track.patterns[frame[i]].slice(0, this.song.columnHeight));
           });
         }
-        if (track.instrument.type === "monophone") {
-          // TODO: Use the Monophone class
-          cells = this.cellsToFrequencies(cells);
-          const instrument = {
-            waveform: track.instrument.waveform,
-            frequencyGlide: track.instrument.frequencyGlide / 1000,
-            amplitudeGlide: track.instrument.amplitudeGlide / 1000,
-          };
-          this.cancelCallbacks.push(playFrequencies(cells, instrument, this.beatDuration, this.globalGain));
-        } else if (track.instrument.type === "noise") {
-          const instrument = new Noise();
-          this.configureNoise(instrument, track.instrument);
-          instrument.connect(this.globalGain);
-
-          let currentProgram = null;
-          let time = now;
-          cells.forEach(cell => {
-            if (cell === NOTE_OFF) {
-              instrument.trackNoteOff(time);
-            } else if (cell !== null) {
-              instrument.trackNoteOn(this.cellFrequency(cell), cell.velocity / 0xFF, time);
-              if (cell.program !== currentProgram) {
-                currentProgram = cell.program;
-                instrument.setProgram(PROGRAMS[currentProgram], time);
-              }
-            }
-            time += this.beatDuration;
-          });
-          instrument.trackNoteOff(time);
-
-          this.cancelCallbacks.push(instrument.dispose.bind(instrument));
+        let instrument;
+        if (track.instrument.type === "noise") {
+          instrument = new Noise();
+        } else if (track.instrument.type === "monophone") {
+          instrument = new Monophone();
         }
+        this.configureInstrument(instrument, track.instrument);
+        instrument.connect(this.globalGain);
+
+        let currentProgram = null;
+        let time = now;
+        cells.forEach(cell => {
+          if (cell === NOTE_OFF) {
+            instrument.trackNoteOff(time);
+          } else if (cell !== null) {
+            instrument.trackNoteOn(this.cellFrequency(cell), cell.velocity / 0xFF, time);
+            if (cell.program !== currentProgram) {
+              currentProgram = cell.program;
+              instrument.setProgram(PROGRAMS[currentProgram], time);
+            }
+          }
+          time += this.beatDuration;
+        });
+        instrument.trackNoteOff(time);
+
+        this.cancelCallbacks.push(instrument.dispose.bind(instrument));
       });
       this.playing = true;
 
@@ -448,7 +446,7 @@ export default {
         const frequency = this.song.baseFrequency * Math.exp(this.natsL * monzo[0] + this.natsS * monzo[1]);
         if (this.activeInstrument.type === "monophone") {
           return this.monophone.noteOn(frequency, velocity / 0xFF);
-        } else {
+        } else if (this.activeInstrument.type === "noise") {
           return this.noise.noteOn(frequency, velocity / 0xFF);
         }
       } else if (this.inputMode === "note" && this.activeRow !== null) {
@@ -521,7 +519,7 @@ export default {
       function controlChange(e) {
         const ctx = getAudioContext();
         if (e.subtype === "modulationwheelcoarse") {
-          this.monophone.vibratoDepth.setTargetAtTime(100 * e.value, safeNow(), 0.005);
+          this.monophone.timbre.setTargetAtTime(e.value, safeNow(), 0.005);
           this.noise.jitter.setTargetAtTime(e.value * 0.75, safeNow(), 0.005);
         }
       }
@@ -931,7 +929,9 @@ export default {
       this.midiInputs = WebMidi.inputs;
     }
     await loadAudioWorklets();
+    this.monophone = new Monophone();
     this.noise = new Noise();
+    this.configureInstrument(this.monophone, this.activeInstrument);
 
     const ctx = getAudioContext();
     this.globalGain = ctx.createGain();
@@ -945,7 +945,9 @@ export default {
     this.computerKeyboard.removeEventListener("keydown", this.computerKeydown);
     this.computerKeyboard.removeEventListener("keyup", this.computerKeyup);
     this.computerKeyboard.dispose();
-    this.monophone.dispose();
+    if (this.monophone !== null) {
+      this.monophone.dispose();
+    }
     if (this.noise !== null) {
       this.noise.dispose();
     }

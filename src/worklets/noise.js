@@ -176,7 +176,7 @@ class Noise extends AudioWorkletProcessor {
         loopStart: 0,
         data: [0],
       },
-      jitter: {
+      timbre: {
         linear: false,
         loopStart: 0,
         data: [0],
@@ -348,7 +348,7 @@ class Noise extends AudioWorkletProcessor {
 
           const jitter = (
             jitterValues[Math.min(jitterValues.length-1, i)] +
-            getTableValue(x, this.tables.jitter)
+            getTableValue(x, this.tables.timbre)
           );
           this.speed = jitter * this.jitterModel();
           if (this.jitterType === "pulseWidth") {

@@ -27,15 +27,13 @@ export default {
           <div class="modal-body">
             <label for="frequency-glide">Frequency glide: </label>
             <input id="frequency-glide" type="number" v-model="instrument.frequencyGlide" />
-            <template v-if="instrument.type === 'monophone'">
-              <label for="amplitude-glide"> Amplitude glide: </label>
-              <input id="amplitude-glide" type="number" v-model="instrument.amplitudeGlide" />
-            </template>
+            <label for="attack"> Attack: </label>
+            <input id="attack" type="number" v-model="instrument.attack" />
+            <label for="release"> Release: </label>
+            <input id="release" type="number" v-model="instrument.release" />
+            <label for="table-delta"> Table Delta: </label>
+            <input id="table-delta" type="number" min="1" v-model="instrument.tableDelta" />
             <template v-if="instrument.type === 'noise'">
-              <label for="attack"> Attack: </label>
-              <input id="attack" type="number" v-model="instrument.attack" />
-              <label for="release"> Release: </label>
-              <input id="release" type="number" v-model="instrument.release" />
               <label for="jitter-model"> Jitter Model: </label>
               <select id="jitter-model" v-model="instrument.jitterModel">
                 <option v-for="model of noiseModels">{{ model }}</option>
@@ -69,8 +67,6 @@ export default {
               <input id="linear" type="checkbox" v-model="instrument.linear" />
               <label for="diff-stages"> Under-sampling: </label>
               <input id="diff-stages" type="number" min="1" v-model="instrument.underSampling" />
-              <label for="table-delta"> Table Delta: </label>
-              <input id="table-delta" type="number" min="1" v-model="instrument.tableDelta" />
             </template>
           </div>
 

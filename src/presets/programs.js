@@ -1,5 +1,3 @@
-// TODO: Unify: jitter = timbre, nats -> cents
-
 const PROGRAMS = {
     P0: {
         name: "Default",
@@ -7,7 +5,7 @@ const PROGRAMS = {
             linear: false,
             data: [100],
         },
-        jitter: {
+        timbre: {
             linear: false,
             data: [0],
         },
@@ -21,7 +19,7 @@ const PROGRAMS = {
         amplitude: {
             data: [100, 90, 50, 20, 15, 20, 10, 5, 3, 2, 1, 0],
         },
-        jitter: {
+        timbre: {
             data: [ 50,  0,  0,  0, 10, 50, 10, 5, 1, 0],
         },
         nat: {

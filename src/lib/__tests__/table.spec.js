@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { getTableValue, parseTable } from "../lib/table.js";
+import { getTableValue, parseTable } from "../table.js";
 
 describe("Table evaluator", () => {
   it("supports constant interpolation", () => {

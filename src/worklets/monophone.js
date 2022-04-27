@@ -121,11 +121,14 @@ class Monophone extends AudioWorkletProcessor {
       );
       const amplitude = getTableValue(x, this.tables.amplitude);
 
-      channel[i] = this.waveform(this.phase, timbre) * amplitude;
+      // TODO: Make anti-aliasing configurable
+      const dp = frequency * dt;
+      const wf = (this.waveform(this.phase, timbre) + this.waveform(this.phase + 0.5*dp, timbre)) * 0.5;
+      channel[i] = wf * amplitude;
 
       t += dt;
       this.tOnset += dt;
-      this.phase += frequency * dt;
+      this.phase += dp;
       this.phase -= Math.floor(this.phase);  // Not strictly needed, but improves accuracy
     }
 

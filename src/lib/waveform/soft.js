@@ -83,3 +83,17 @@ export function softLog(phase, sharpness) {
   const min = Math.log1p(-sharpness)
   return 2*((Math.log1p(sine(phase) * sharpness) - min) / (Math.log1p(sharpness) - min)) - 1;
 }
+
+export function softRect(phase, sharpness, separation) {
+  return (
+    softSawtooth(phase + separation, sharpness) -
+    softSawtooth(phase - separation, sharpness)
+  ) * (0.5 + sharpness*0.5);
+}
+
+export function softTent(phase, sharpness, separation) {
+  return 0.5 * (
+    softSemisine(phase + separation, sharpness) -
+    softSemisine(phase - separation, sharpness)
+  ) / sine(separation);
+}

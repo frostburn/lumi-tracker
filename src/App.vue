@@ -17,6 +17,7 @@ import { Keyboard } from "./keyboard.js";
 import PROGRAMS from "./presets/programs.js";
 
 const DEFAULT_COLUMN_HEIGHT = 64;
+const CONTROL_TIME = 0.005;
 
 export default {
   components: {
@@ -52,6 +53,12 @@ export default {
       showInstrumentModal: false,
       accidentals: "sharps",
       pitchBendMonzo: [1, 0],
+      controls: {
+        timbre: 0,
+        bias: 0,
+        vibratoDepth: 0,
+        vibratoFrequency: 7,
+      },
       audioDelay: 1,
       playing: false,
       activeRow: null,
@@ -166,6 +173,46 @@ export default {
           });
         });
       },
+    },
+    'controls.timbre': {
+      handler(newValue) {
+        if (this.noise !== null) {
+          this.noise.timbre.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+        if (this.monophone !== null) {
+          this.monophone.timbre.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+      }
+    },
+    'controls.bias': {
+      handler(newValue) {
+        if (this.noise !== null) {
+          this.noise.jitter.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+        if (this.monophone !== null) {
+          this.monophone.bias.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+      }
+    },
+    'controls.vibratoDepth': {
+      handler(newValue) {
+        if (this.noise !== null) {
+          this.noise.vibratoDepth.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+        if (this.monophone !== null) {
+          this.monophone.vibratoDepth.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+      }
+    },
+    'controls.vibratoFrequency': {
+      handler(newValue) {
+        if (this.noise !== null) {
+          this.noise.vibratoFrequency.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+        if (this.monophone !== null) {
+          this.monophone.vibratoFrequency.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+      }
     },
   },
   computed: {
@@ -521,8 +568,7 @@ export default {
       function controlChange(e) {
         const ctx = getAudioContext();
         if (e.subtype === "modulationwheelcoarse") {
-          this.monophone.timbre.setTargetAtTime(e.value, safeNow(), 0.005);
-          this.noise.timbre.setTargetAtTime(e.value, safeNow(), 0.005);
+          this.controls.timbre = e.value;
         }
       }
       this.midiInput.addListener("controlchange", controlChange.bind(this));
@@ -1086,6 +1132,19 @@ export default {
     <div class="input-column">
       <h1>Computer Keyboard Input</h1>
       <ComputerKeyboard @noteOn="onScreenComputerNoteOn" :activeKeys="activeComputerKeys" />
+    </div>
+    <div class="input-column">
+      <label for="timbre">S </label>
+      <input id="timbre" type="range" min="0" max="1" step="any" v-model="controls.timbre" />
+      <br>
+      <label for="bias">B </label>
+      <input id="bias" type="range" min="0" max="1" step="any" v-model="controls.bias" />
+      <br>
+      <label for="vibrato-depth">V </label>
+      <input id="vibrato-depth" type="range" min="0" max="150" step="any" v-model="controls.vibratoDepth" />
+      <br>
+      <label for="vibrato-frequency">F </label>
+      <input id="vibrato-frequency" type="range" min="0.5" max="10" step="any" v-model="controls.vibratoFrequency" />
     </div>
     <div class="input-column">
       <TimeDomainVisualizer :analyser="analyser" :width="256" :height="100" :frameHold="2" />

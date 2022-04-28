@@ -1,9 +1,7 @@
 import BaseProcessor from "./base.js";
 import { getTableValue } from "../lib/table.js";
-import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh, softLog } from "../lib/waveform/soft.js";
+import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh, softLog, softRect, softTent } from "../lib/waveform/soft.js";
 import { lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35 } from "../lib/waveform/lissajous.js";
-
-const LISSAJOUS = [lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35];
 
 function smoothSemisine(phase, sharpness) {
   return softSemisine(phase - 0.25, sharpness);
@@ -36,6 +34,16 @@ function smoothTanh(phase, sharpness) {
 function smoothLog(phase, sharpness) {
   return softLog(phase, 0.99*sharpness);
 }
+
+function smoothRect(phase, sharpness, bias) {
+  return softRect(phase, Math.sqrt(sharpness), 0.25 - 0.245 * bias);
+}
+
+function smoothTent(phase, sharpness, bias) {
+  return softTent(phase, sharpness, 0.25 - 0.245 * bias);
+}
+
+const BIASABLE = [lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35, smoothRect, smoothTent];
 
 function biased(phase, x) {
   phase -= Math.floor(phase + 0.5);
@@ -121,6 +129,10 @@ class Monophone extends BaseProcessor {
         this.waveform = smoothTanh;
       } else if (data.value === "log") {
         this.waveform = smoothLog;
+      } else if (data.value === "rect") {
+        this.waveform = smoothRect;
+      } else if (data.value === "tent") {
+        this.waveform = smoothTent;
       } else if (data.value === "Lissajous 2 1") {
         this.waveform = lissajous21;
       } else if (data.value === "Lissajous 1 3") {
@@ -171,7 +183,7 @@ class Monophone extends BaseProcessor {
       // TODO: Make anti-aliasing configurable
       const dp = frequency * dt;
       let wf;
-      if (LISSAJOUS.includes(this.waveform)) {
+      if (BIASABLE.includes(this.waveform)) {
         wf = (this.waveform(this.phase, timbre, bias) + this.waveform(this.phase + 0.5*dp, timbre, bias)) * 0.5;
       } else {
         const b = 0.25 + 0.25*bias;

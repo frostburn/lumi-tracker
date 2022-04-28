@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh } from "../soft.js";
+import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh, softLog } from "../soft.js";
 
 const PHASES = [-1.1, 0, 0.25, 0.5, 1, 2.9];
 
@@ -113,4 +113,18 @@ describe("Soft tanh", () => {
       expect(softTanh(phase, 0.01)).toBeCloseTo(softTanh(phase, 0));
     });
   });
+});
+
+describe("Soft log", () => {
+  it("is periodic", () => {
+    PHASES.forEach(phase => {
+      expect(softLog(phase, 0.5)).toBeCloseTo(softLog(phase+1, 0.5));
+    });
+  });
+  it("is continuous around sharpness=0", () => {
+    PHASES.forEach(phase => {
+      expect(softLog(phase, 0.001)).toBeCloseTo(softLog(phase, 0));
+    });
+  });
+  // TODO: Assert continuity around sharpness=1 if the limit exists
 });

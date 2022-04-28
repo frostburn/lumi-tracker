@@ -71,3 +71,15 @@ export function softTanh(phase, sharpness) {
   }
   return Math.tanh(sine(phase) * sharpness) / Math.tanh(sharpness);
 }
+
+export function softLog(phase, sharpness) {
+  if (sharpness < EPSILON) {
+    return sine(phase);
+  }
+  if (sharpness > 1 - EPSILON) {
+    // TODO: Find the correct limit if it exists
+    return 1;
+  }
+  const min = Math.log1p(-sharpness)
+  return 2*((Math.log1p(sine(phase) * sharpness) - min) / (Math.log1p(sharpness) - min)) - 1;
+}

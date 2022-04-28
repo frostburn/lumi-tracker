@@ -1,6 +1,34 @@
 import BaseProcessor from "./base.js";
 import { getTableValue } from "../lib/table.js";
-import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh } from "../lib/waveform/soft.js";
+import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh, softLog } from "../lib/waveform/soft.js";
+
+function smoothSawtooth(phase, sharpness) {
+  return softSawtooth(phase, Math.sqrt(sharpness));
+}
+
+function smoothTriangle(phase, sharpness) {
+  return softTriangle(phase, Math.sqrt(sharpness));
+}
+
+function smoothSquare(phase, sharpness) {
+  return softSquare(phase, Math.sqrt(sharpness));
+}
+
+function smoothSinh(phase, sharpness) {
+  return softSinh(phase, sharpness*12);
+}
+
+function smoothCosh(phase, sharpness) {
+  return softCosh(phase, sharpness*12);
+}
+
+function smoothTanh(phase, sharpness) {
+  return softTanh(phase, sharpness*12);
+}
+
+function smoothLog(phase, sharpness) {
+  return softLog(phase, 0.99*sharpness);
+}
 
 class Monophone extends BaseProcessor {
 
@@ -53,17 +81,19 @@ class Monophone extends BaseProcessor {
       if (data.value === "semisine") {
         this.waveform = softSemisine;
       } else if (data.value === "sawtooth") {
-        this.waveform = softSawtooth;
+        this.waveform = smoothSawtooth;
       } else if (data.value === "triangle") {
-        this.waveform = softTriangle;
+        this.waveform = smoothTriangle;
       } else if (data.value === "square") {
-        this.waveform = softSquare;
+        this.waveform = smoothSquare;
       } else if (data.value === "sinh") {
-        this.waveform = softSinh;
+        this.waveform = smoothSinh;
       } else if (data.value === "cosh") {
-        this.waveform = softCosh;
+        this.waveform = smoothCosh;
       } else if (data.value === "tanh") {
-        this.waveform = softTanh;
+        this.waveform = smoothTanh;
+      } else if (data.value === "log") {
+        this.waveform = smoothLog;
       } else {
         throw `Unrecognized waveform ${data.value}`;
       }

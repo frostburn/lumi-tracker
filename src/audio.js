@@ -25,7 +25,7 @@ export function availableOscillatorWaveforms() {
 }
 
 export function availableWaveforms() {
-    return ["semisine", "square", "sawtooth", "triangle", "sinh", "cosh", "tanh"];
+    return ["semisine", "square", "sawtooth", "triangle", "sinh", "cosh", "tanh", "log"];
 }
 
 export function availableNoiseModels() {

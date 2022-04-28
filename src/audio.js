@@ -366,24 +366,20 @@ export class Miniphone {
     }
 }
 
-// TODO: Monophone super class
-export class Noise {
+class MonophonicBase {
     constructor(frequencyGlide=0.001, attack=0.001, release=0.001) {
         this.frequencyGlide = frequencyGlide;
         this.attack = attack;
         this.release = release;
         const ctx = getAudioContext();
-        this.generator = obtainNoise();
-        this.jitter = this.generator.parameters.get("jitter");
         this._centsToNats = ctx.createGain();
         this._centsToNats.gain.setValueAtTime(Math.log(2)/1200, ctx.currentTime);
         this.pitchBend = ctx.createConstantSource();
         this.pitchBend.start(ctx.currentTime);
-        this.pitchBend.connect(this._centsToNats).connect(this.generator.parameters.get("nat"));
+        this.pitchBend.connect(this._centsToNats);
         this.detune = this.pitchBend.offset;
         this.envelope = ctx.createGain();
         this.envelope.gain.setValueAtTime(0, ctx.currentTime);
-        this.generator.connect(this.envelope);
 
         this.vibratoGain = ctx.createGain();
         this.vibratoDepth = this.vibratoGain.gain;
@@ -413,9 +409,6 @@ export class Noise {
     }
 
     setFullConfig(data) {
-        ["model", "jitterModel", "jitterType", "bitDepth", "finiteLength", "finiteSeed", "logisticR", "jitterBitDepth", "jitterFiniteLength", "jitterFiniteSeed", "jitterLogisticR", "diffStages", "linear", "underSampling", "tableDelta"].forEach(type => {
-            this.setConfig({ type, value: data[type] });
-        });
         this.frequencyGlide = data.frequencyGlide;
         this.attack = data.attack;
         this.release = data.release;
@@ -426,7 +419,6 @@ export class Noise {
     }
 
     dispose() {
-        disposeNoise(this.generator);
         disposeOscillator(this.vibratoOscillator);
         this.pitchBend.disconnect();
         this.pitchBend.stop();
@@ -511,147 +503,46 @@ export class Noise {
     }
 }
 
-// TODO: Monophone super class
-export class Monophone {
+export class Noise extends MonophonicBase {
     constructor(frequencyGlide=0.001, attack=0.001, release=0.001) {
-        this.frequencyGlide = frequencyGlide;
-        this.attack = attack;
-        this.release = release;
-        const ctx = getAudioContext();
-        this.generator = obtainMonophone();
-        this.timbre = this.generator.parameters.get("timbre");
-        this._centsToNats = ctx.createGain();
-        this._centsToNats.gain.setValueAtTime(Math.log(2)/1200, ctx.currentTime);
-        this.pitchBend = ctx.createConstantSource();
-        this.pitchBend.start(ctx.currentTime);
-        this.pitchBend.connect(this._centsToNats).connect(this.generator.parameters.get("nat"));
-        this.detune = this.pitchBend.offset;
-        this.envelope = ctx.createGain();
-        this.envelope.gain.setValueAtTime(0, ctx.currentTime);
+        super(frequencyGlide, attack, release);
+        this.generator = obtainNoise();
+        this.jitter = this.generator.parameters.get("jitter");
+        this._centsToNats.connect(this.generator.parameters.get("nat"));
         this.generator.connect(this.envelope);
-
-        this.vibratoGain = ctx.createGain();
-        this.vibratoDepth = this.vibratoGain.gain;
-        this.vibratoDepth.setValueAtTime(0, ctx.currentTime);
-        this.vibratoOscillator = obtainOscillator();
-        this.vibratoOscillator.connect(this.vibratoGain).connect(this._centsToNats);
-        this.vibratoFrequency = this.vibratoOscillator.frequency;
-        this.vibratoFrequency.setValueAtTime(7, ctx.currentTime);
-
-        this.stack = [];
-        this.stackDepletionTime = -10000;
-
-        this.trackPlaying = false;
-        this.lastTrackTime = -10000;
-    }
-
-    setConfig(config) {
-        this.generator.port.postMessage(config);
-    }
-
-    setProgram(program, when) {
-        this.setConfig({
-            type: "tables",
-            value: program,
-            when,
-        });
     }
 
     setFullConfig(data) {
-        ["waveform", "tableDelta"].forEach(type => {
-            this.setConfig({ type, value: data[type] });
+        super.setFullConfig(data);
+        ["model", "jitterModel", "jitterType", "bitDepth", "finiteLength", "finiteSeed", "logisticR", "jitterBitDepth", "jitterFiniteLength", "jitterFiniteSeed", "jitterLogisticR", "diffStages", "linear", "underSampling", "tableDelta"].forEach(type => {
+            super.setConfig({ type, value: data[type] });
         });
-        this.frequencyGlide = data.frequencyGlide;
-        this.attack = data.attack;
-        this.release = data.release;
-    }
-
-    connect(destination) {
-        return this.envelope.connect(destination);
     }
 
     dispose() {
+        super.dispose();
+        disposeNoise(this.generator);
+    }
+}
+
+export class Monophone extends MonophonicBase {
+    constructor(frequencyGlide=0.001, attack=0.001, release=0.001) {
+        super(frequencyGlide, attack, release);
+        this.generator = obtainMonophone();
+        this.timbre = this.generator.parameters.get("timbre");
+        this._centsToNats.connect(this.generator.parameters.get("nat"));
+        this.generator.connect(this.envelope);
+    }
+
+    setFullConfig(data) {
+        super.setFullConfig(data);
+        ["waveform", "tableDelta"].forEach(type => {
+            this.setConfig({ type, value: data[type] });
+        });
+    }
+
+    dispose() {
+        super.dispose();
         disposeMonophone(this.generator);
-        disposeOscillator(this.vibratoOscillator);
-        this.pitchBend.disconnect();
-        this.pitchBend.stop();
-        this.envelope.disconnect();
-    }
-
-    trackNoteOn(frequency, velocity, when) {
-        if (when < this.lastTrackTime) {
-            throw "Causality error during tracking";
-        }
-        this.lastTrackTime = when;
-
-        const nats = Math.log(frequency);
-        this.setConfig({type: "onset", when});
-        this.envelope.gain.setTargetAtTime(velocity, when, this.attack);
-        if (this.trackPlaying) {
-            this.generator.parameters.get("nat").setTargetAtTime(nats, when, this.frequencyGlide);
-        } else {
-            this.generator.parameters.get("nat").setValueAtTime(nats, when);
-            this.trackPlaying = true;
-        }
-    }
-
-    trackNoteOff(when) {
-        if (when < this.lastTrackTime) {
-            throw "Causality error during tracking";
-        }
-        this.lastTrackTime = when;
-
-        this.envelope.gain.setTargetAtTime(0, when, this.release);
-        this.trackPlaying = false;
-    }
-
-    noteOn(frequency, velocity) {
-        const nats = Math.log(frequency);
-        const ctx = getAudioContext();
-        const now = safeNow();
-        this.setConfig({type: "onset", when: now});
-        this.envelope.gain.cancelScheduledValues(now);
-        this.envelope.gain.setTargetAtTime(velocity, now, this.attack);
-        if (this.stack.length) {
-            this.generator.parameters.get("nat").setTargetAtTime(nats, now, this.frequencyGlide);
-        } else {
-            const decayDuration = now - this.stackDepletionTime;
-            const releaseDuration = this.release * 1.75;
-            if (decayDuration < releaseDuration) {
-                this.generator.parameters.get("nat").setTargetAtTime(
-                    nats,
-                    now,
-                    Math.min(this.frequencyGlide, releaseDuration - decayDuration) * 0.5
-                );
-            } else {
-                this.generator.parameters.get("nat").setValueAtTime(nats, now);
-            }
-        }
-        const id = Symbol();
-        const voice = {nats, velocity, id};
-        this.stack.push(voice);
-
-        function noteOff() {
-            const then = safeNow();
-            if (!this.stack.length) {
-                console.warn("Note off with an empty stack");
-                this.envelope.gain.setTargetAtTime(0, then, this.release);
-            }
-            if (this.stack[this.stack.length - 1].id === id) {
-                this.stack.pop();
-                if (!this.stack.length) {
-                    this.envelope.gain.setTargetAtTime(0, then, this.release);
-                    this.stackDepletionTime = then;
-                    return;
-                }
-                const topVoice = this.stack[this.stack.length - 1];
-                this.generator.parameters.get("nat").setTargetAtTime(topVoice.nats, then, this.frequencyGlide);
-                this.envelope.gain.setTargetAtTime(topVoice.velocity, then, this.attack);
-            } else {
-                this.stack.splice(this.stack.indexOf(voice), 1);
-            }
-        }
-
-        return noteOff.bind(this);
     }
 }

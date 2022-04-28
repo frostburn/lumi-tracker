@@ -7,6 +7,7 @@ import ComputerKeyboard from "./components/ComputerKeyboard.vue";
 import MosModal from "./components/MosModal.vue";
 import EdoModal from "./components/EdoModal.vue";
 import InstrumentModal from "./components/InstrumentModal.vue";
+import TimeDomainVisualizer from "./components/TimeDomainVisualizer.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, REFERENCE_OCTAVE, ratioToCents, unicodeLength, unicodeSplit } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, setAudioDelay, safeNow } from "./audio.js";
@@ -26,12 +27,14 @@ export default {
     Track,
     DiatonicKeyboard,
     ComputerKeyboard,
+    TimeDomainVisualizer,
   },
   data() {
     return {
       globalGain: null,  // Initialized on mounting for convenience
       monophone: null,  // Can only be initialized on mounting
       noise: null,  // same
+      analyser: null,
       activeInstrument: null,
       activeProgram: "P0",
       computerKeyboard: null,
@@ -932,9 +935,11 @@ export default {
     this.configureInstrument(this.monophone, this.activeInstrument);
 
     const ctx = getAudioContext();
+    this.analyser = ctx.createAnalyser();
+    this.analyser.fftSize = 1024;
     this.globalGain = ctx.createGain();
     this.globalGain.gain.setValueAtTime(0.4, ctx.currentTime);
-    this.globalGain.connect(ctx.destination);
+    this.globalGain.connect(this.analyser).connect(ctx.destination);
 
     this.monophone.connect(this.globalGain);
     this.noise.connect(this.globalGain);
@@ -1082,6 +1087,9 @@ export default {
       <h1>Computer Keyboard Input</h1>
       <ComputerKeyboard @noteOn="onScreenComputerNoteOn" :activeKeys="activeComputerKeys" />
     </div>
+    <div class="input-column">
+      <TimeDomainVisualizer :analyser="analyser" :width="256" :height="100" :frameHold="2" />
+    </div>
   </div>
   <div class="break"/>
   <footer><a href="https://github.com/frostburn/lumi-tracker/issues/">Report bugs and suggest issues</a></footer>
@@ -1104,6 +1112,10 @@ export default {
   height: 600px;
   overflow: scroll;
   user-select: none;
+}
+
+.input-container {
+  margin-top: 5px;
 }
 
 .input-column {

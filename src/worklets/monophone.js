@@ -1,6 +1,9 @@
 import BaseProcessor from "./base.js";
 import { getTableValue } from "../lib/table.js";
 import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh, softLog } from "../lib/waveform/soft.js";
+import { lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35 } from "../lib/waveform/lissajous.js";
+
+const LISSAJOUS = [lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35];
 
 function smoothSemisine(phase, sharpness) {
   return softSemisine(phase - 0.25, sharpness);
@@ -118,6 +121,18 @@ class Monophone extends BaseProcessor {
         this.waveform = smoothTanh;
       } else if (data.value === "log") {
         this.waveform = smoothLog;
+      } else if (data.value === "Lissajous 2 1") {
+        this.waveform = lissajous21;
+      } else if (data.value === "Lissajous 1 3") {
+        this.waveform = lissajous13;
+      } else if (data.value === "Lissajous 2 3") {
+        this.waveform = lissajous23;
+      } else if (data.value === "Lissajous 2 5") {
+        this.waveform = lissajous25;
+      } else if (data.value === "Lissajous 3 4") {
+        this.waveform = lissajous34;
+      } else if (data.value === "Lissajous 3 5") {
+        this.waveform = lissajous35;
       } else {
         throw `Unrecognized waveform ${data.value}`;
       }
@@ -155,10 +170,15 @@ class Monophone extends BaseProcessor {
 
       // TODO: Make anti-aliasing configurable
       const dp = frequency * dt;
-      const b = 0.25 + 0.25*bias;
-      const p0 = biased(this.phase, b);
-      const p1 = biased(this.phase + 0.5*dp, b);
-      const wf = (this.waveform(p0, timbre) + this.waveform(p1, timbre)) * 0.5;
+      let wf;
+      if (LISSAJOUS.includes(this.waveform)) {
+        wf = (this.waveform(this.phase, timbre, bias) + this.waveform(this.phase + 0.5*dp, timbre, bias)) * 0.5;
+      } else {
+        const b = 0.25 + 0.25*bias;
+        const p0 = biased(this.phase, b);
+        const p1 = biased(this.phase + 0.5*dp, b);
+        wf = (this.waveform(p0, timbre) + this.waveform(p1, timbre)) * 0.5;
+      }
       channel[i] = wf * amplitude;
 
       t += dt;

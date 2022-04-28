@@ -48,5 +48,26 @@ export function softSquare(phase, sharpness) {
     return square(phase);
   }
   sharpness = sharpness / (1 - sharpness);
+  return Math.atan(sine(phase) * sharpness) / Math.atan(sharpness);
+}
+
+export function softSinh(phase, sharpness) {
+  if (sharpness < EPSILON) {
+    return sine(phase);
+  }
+  return Math.sinh(sine(phase) * sharpness) / Math.sinh(sharpness);
+}
+
+export function softCosh(phase, sharpness) {
+  if (sharpness < EPSILON) {
+    return -cosine(phase);
+  }
+  return 2*(Math.cosh(Math.sin(Math.PI*phase) * sharpness) - 1) / (Math.cosh(sharpness) - 1) - 1;
+}
+
+export function softTanh(phase, sharpness) {
+  if (sharpness < EPSILON) {
+    return sine(phase);
+  }
   return Math.tanh(sine(phase) * sharpness) / Math.tanh(sharpness);
 }

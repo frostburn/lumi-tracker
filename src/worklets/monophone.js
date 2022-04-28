@@ -1,6 +1,6 @@
 import BaseProcessor from "./base.js";
 import { getTableValue } from "../lib/table.js";
-import { softSemisine, softSawtooth, softTriangle, softSquare } from "../lib/waveform/soft.js";
+import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh } from "../lib/waveform/soft.js";
 
 class Monophone extends BaseProcessor {
 
@@ -58,6 +58,12 @@ class Monophone extends BaseProcessor {
         this.waveform = softTriangle;
       } else if (data.value === "square") {
         this.waveform = softSquare;
+      } else if (data.value === "sinh") {
+        this.waveform = softSinh;
+      } else if (data.value === "cosh") {
+        this.waveform = softCosh;
+      } else if (data.value === "tanh") {
+        this.waveform = softTanh;
       } else {
         throw `Unrecognized waveform ${data.value}`;
       }

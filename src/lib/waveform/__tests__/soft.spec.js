@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { softSemisine, softSawtooth, softTriangle, softSquare } from "../soft.js";
+import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh } from "../soft.js";
 
 const PHASES = [-1.1, 0, 0.25, 0.5, 1, 2.9];
 
@@ -71,7 +71,46 @@ describe("Soft square", () => {
   });
   it("is continuous around sharpness=1", () => {
     [-1.1, 0.01, 0.501, 1.01, 2.9].forEach(phase => {
-      expect(softSquare(phase, 0.999)).toBeCloseTo(softSquare(phase, 1));
+      expect(softSquare(phase, 0.99999)).toBeCloseTo(softSquare(phase, 1));
+    });
+  });
+});
+
+describe("Soft sinh", () => {
+  it("is periodic", () => {
+    PHASES.forEach(phase => {
+      expect(softSinh(phase, 0.5)).toBeCloseTo(softSinh(phase+1, 0.5));
+    });
+  });
+  it("is continuous around sharpness=0", () => {
+    PHASES.forEach(phase => {
+      expect(softSinh(phase, 0.01)).toBeCloseTo(softSinh(phase, 0));
+    });
+  });
+});
+
+describe("Soft cosh", () => {
+  it("is periodic", () => {
+    PHASES.forEach(phase => {
+      expect(softCosh(phase, 0.5)).toBeCloseTo(softCosh(phase+1, 0.5));
+    });
+  });
+  it("is continuous around sharpness=0", () => {
+    PHASES.forEach(phase => {
+      expect(softCosh(phase, 0.01)).toBeCloseTo(softCosh(phase, 0));
+    });
+  });
+});
+
+describe("Soft tanh", () => {
+  it("is periodic", () => {
+    PHASES.forEach(phase => {
+      expect(softTanh(phase, 0.5)).toBeCloseTo(softTanh(phase+1, 0.5));
+    });
+  });
+  it("is continuous around sharpness=0", () => {
+    PHASES.forEach(phase => {
+      expect(softTanh(phase, 0.01)).toBeCloseTo(softTanh(phase, 0));
     });
   });
 });

@@ -2,6 +2,10 @@ import BaseProcessor from "./base.js";
 import { getTableValue } from "../lib/table.js";
 import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh, softLog } from "../lib/waveform/soft.js";
 
+function smoothSemisine(phase, sharpness) {
+  return softSemisine(phase - 0.25, sharpness);
+}
+
 function smoothSawtooth(phase, sharpness) {
   return softSawtooth(phase, Math.sqrt(sharpness));
 }
@@ -19,24 +23,26 @@ function smoothSinh(phase, sharpness) {
 }
 
 function smoothCosh(phase, sharpness) {
-  return softCosh(phase, sharpness*12);
+  return softCosh(phase - 0.25, sharpness*12);
 }
 
 function smoothTanh(phase, sharpness) {
-  return softTanh(phase, sharpness*12);
+  return softTanh(phase + 0.25, sharpness*12);
 }
 
 function smoothLog(phase, sharpness) {
   return softLog(phase, 0.99*sharpness);
 }
 
-function swing(phase, midpoint) {
-  // XXX: Not real swing because we don't add the floor back
-  phase -= Math.floor(phase);
-  if (phase < midpoint) {
-    return 0.5 * phase / midpoint;
+function biased(phase, x) {
+  phase -= Math.floor(phase + 0.5);
+  if (Math.abs(phase) < x) {
+    return 0.25 * phase / x;
   }
-  return 0.5 + 0.5 * (phase - midpoint) / (1 - midpoint);
+  if (phase > 0) {
+    return 0.25 + 0.25 * (phase - x) / (0.5 - x);
+  }
+  return 0.25 * (phase + x) / (0.5 - x) - 0.25;
 }
 
 class Monophone extends BaseProcessor {
@@ -64,7 +70,7 @@ class Monophone extends BaseProcessor {
     // Oscillator phase
     this.phase = 0;
 
-    this.waveform = softSemisine;
+    this.waveform = smoothSemisine;
 
     this.tables = {
       amplitude: {
@@ -97,7 +103,7 @@ class Monophone extends BaseProcessor {
     const data = msg.data;
     if (data.type === "waveform") {
       if (data.value === "semisine") {
-        this.waveform = softSemisine;
+        this.waveform = smoothSemisine;
       } else if (data.value === "sawtooth") {
         this.waveform = smoothSawtooth;
       } else if (data.value === "triangle") {
@@ -149,9 +155,9 @@ class Monophone extends BaseProcessor {
 
       // TODO: Make anti-aliasing configurable
       const dp = frequency * dt;
-      const midpoint = 0.5 + 0.5*bias;
-      const p0 = swing(this.phase, midpoint);
-      const p1 = swing(this.phase + 0.5*dp, midpoint);
+      const b = 0.25 + 0.25*bias;
+      const p0 = biased(this.phase, b);
+      const p1 = biased(this.phase + 0.5*dp, b);
       const wf = (this.waveform(p0, timbre) + this.waveform(p1, timbre)) * 0.5;
       channel[i] = wf * amplitude;
 

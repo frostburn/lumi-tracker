@@ -49,3 +49,12 @@ export function toSignedString(number, saturated=true) {
     }
     return (9-number).toString(36).toLowerCase();
 }
+
+function swing(phase, midpoint) {
+  const floor = Math.floor(phase);
+  phase -= floor;
+  if (phase < midpoint) {
+    return 0.5 * phase / midpoint + floor;
+  }
+  return 0.5 + 0.5 * (phase - midpoint) / (1 - midpoint) + floor;
+}

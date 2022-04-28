@@ -110,6 +110,7 @@ function obtainNoise(
         noise = new AudioWorkletNode(ctx, "noise");
     }
     noise.parameters.get("jitter").setValueAtTime(0, ctx.currentTime);
+    noise.parameters.get("timbre").setValueAtTime(0, ctx.currentTime);
     noise.port.postMessage({ type: "model", value: model });
     noise.port.postMessage({ type: "jitterModel", value: jitterModel });
     noise.port.postMessage({ type: "jitterType", value: jitterType });
@@ -134,6 +135,7 @@ function disposeNoise(noise) {
     noise.port.postMessage({type: "cancel"});
     noise.parameters.get("nat").cancelScheduledValues(ctx.currentTime);
     noise.parameters.get("jitter").cancelScheduledValues(ctx.currentTime);
+    noise.parameters.get("timbre").cancelScheduledValues(ctx.currentTime);
     noise.disconnect();
     NOISE_BANK.push(noise);
 }
@@ -149,6 +151,7 @@ function obtainMonophone(
         monophone = new AudioWorkletNode(ctx, "monophone");
     }
     monophone.parameters.get("timbre").setValueAtTime(0, ctx.currentTime);
+    monophone.parameters.get("bias").setValueAtTime(0, ctx.currentTime);
     monophone.port.postMessage({ type: "waveform", value: waveform });
     monophone.port.postMessage({ type: "tableDelta", value: tableDelta });
     monophone.port.postMessage({ type: "tables", value: tables });
@@ -161,6 +164,7 @@ function disposeMonophone(monophone) {
     monophone.port.postMessage({type: "cancel"});
     monophone.parameters.get("nat").cancelScheduledValues(ctx.currentTime);
     monophone.parameters.get("timbre").cancelScheduledValues(ctx.currentTime);
+    monophone.parameters.get("bias").cancelScheduledValues(ctx.currentTime);
     monophone.disconnect();
     MONOPHONE_BANK.push(monophone);
 }
@@ -530,6 +534,7 @@ export class Monophone extends MonophonicBase {
         super(frequencyGlide, attack, release);
         this.generator = obtainMonophone();
         this.timbre = this.generator.parameters.get("timbre");
+        this.bias = this.generator.parameters.get("bias");
         this._centsToNats.connect(this.generator.parameters.get("nat"));
         this.generator.connect(this.envelope);
     }

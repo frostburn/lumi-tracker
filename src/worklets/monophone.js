@@ -30,6 +30,15 @@ function smoothLog(phase, sharpness) {
   return softLog(phase, 0.99*sharpness);
 }
 
+function swing(phase, midpoint) {
+  // XXX: Not real swing because we don't add the floor back
+  phase -= Math.floor(phase);
+  if (phase < midpoint) {
+    return 0.5 * phase / midpoint;
+  }
+  return 0.5 + 0.5 * (phase - midpoint) / (1 - midpoint);
+}
+
 class Monophone extends BaseProcessor {
 
   // Static getter to define AudioParam objects in this custom processor.
@@ -41,6 +50,10 @@ class Monophone extends BaseProcessor {
       },
       {
         name: 'timbre',
+        defaultValue: 0,
+      },
+      {
+        name: 'bias',
         defaultValue: 0,
       },
     ];
@@ -69,7 +82,12 @@ class Monophone extends BaseProcessor {
         loopStart: 0,
         data: [0],
       },
-    }
+      bias: {
+        linear: false,
+        loopStart: 0,
+        data: [0],
+      },
+    };
   }
 
   applyMessage(msg) {
@@ -107,6 +125,7 @@ class Monophone extends BaseProcessor {
 
     const natValues = parameters.nat;
     const timbreValues = parameters.timbre;
+    const biasValues = parameters.bias;
 
     const dt = 1 / sampleRate;
 
@@ -122,11 +141,18 @@ class Monophone extends BaseProcessor {
         timbreValues[Math.min(timbreValues.length-1, i)] +
         getTableValue(x, this.tables.timbre)
       );
+      const bias = (
+        biasValues[Math.min(biasValues.length-1, i)] +
+        getTableValue(x, this.tables.bias)
+      );
       const amplitude = getTableValue(x, this.tables.amplitude);
 
       // TODO: Make anti-aliasing configurable
       const dp = frequency * dt;
-      const wf = (this.waveform(this.phase, timbre) + this.waveform(this.phase + 0.5*dp, timbre)) * 0.5;
+      const midpoint = 0.5 + 0.5*bias;
+      const p0 = swing(this.phase, midpoint);
+      const p1 = swing(this.phase + 0.5*dp, midpoint);
+      const wf = (this.waveform(p0, timbre) + this.waveform(p1, timbre)) * 0.5;
       channel[i] = wf * amplitude;
 
       t += dt;

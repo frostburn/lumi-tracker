@@ -98,7 +98,7 @@ function disposeOscillator(oscillator) {
 
 function obtainNoise(
         model="uniform", jitterModel="balanced", jitterType="pulseWidth",
-        bitDepth=1, finiteLength=8, finiteSeed=0, logisticR=4, underSampling=1,
+        bitDepth=1, finiteLength=8, finiteSeed=0, underSampling=1,
         jitterBitDepth=1, jitterFiniteLength=8, jitterFiniteSeed=0, jitterLogisticR=4,
         diffStages=0, linear=false, tableDelta=0.02, tables=PROGRAMS.P0,
     ) {
@@ -116,7 +116,6 @@ function obtainNoise(
     noise.port.postMessage({ type: "bitDepth", value: bitDepth });
     noise.port.postMessage({ type: "finiteLength", value: finiteLength });
     noise.port.postMessage({ type: "finiteSeed", value: finiteSeed });
-    noise.port.postMessage({ type: "logisticR", value: logisticR });
     noise.port.postMessage({ type: "jitterBitDepth", value: jitterBitDepth });
     noise.port.postMessage({ type: "jitterFiniteLength", value: jitterFiniteLength });
     noise.port.postMessage({ type: "jitterFiniteSeed", value: jitterFiniteSeed });
@@ -508,13 +507,14 @@ export class Noise extends MonophonicBase {
         super(frequencyGlide, attack, release);
         this.generator = obtainNoise();
         this.jitter = this.generator.parameters.get("jitter");
+        this.timbre = this.generator.parameters.get("timbre");
         this._centsToNats.connect(this.generator.parameters.get("nat"));
         this.generator.connect(this.envelope);
     }
 
     setFullConfig(data) {
         super.setFullConfig(data);
-        ["model", "jitterModel", "jitterType", "bitDepth", "finiteLength", "finiteSeed", "logisticR", "jitterBitDepth", "jitterFiniteLength", "jitterFiniteSeed", "jitterLogisticR", "diffStages", "linear", "underSampling", "tableDelta"].forEach(type => {
+        ["model", "jitterModel", "jitterType", "bitDepth", "finiteLength", "finiteSeed", "jitterBitDepth", "jitterFiniteLength", "jitterFiniteSeed", "jitterLogisticR", "diffStages", "linear", "underSampling", "tableDelta"].forEach(type => {
             super.setConfig({ type, value: data[type] });
         });
     }

@@ -51,8 +51,6 @@ export default {
               <input id="finite-length" type="number" min="1" v-model="instrument.finiteLength" />
               <label for="finite-seed"> Finite Seed: </label>
               <input id="finite-seed" type="number" v-model="instrument.finiteSeed" />
-              <label for="logistic-r"> Logistic r: </label>
-              <input id="logistic-r" type="number" v-model="instrument.logisticR" min="3.55" max="4" step="0.01" />
               <label for="jitter-bit-depth"> Jitter Bit Depth: </label>
               <input id="jitter-bit-depth" type="number" min="1" max="31" v-model="instrument.jitterBitDepth" />
               <label for="jitter-finite-length"> Jitter Finite Length: </label>

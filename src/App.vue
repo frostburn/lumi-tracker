@@ -99,7 +99,6 @@ export default {
               bitDepth: 1,
               finiteLength: 8,
               finiteSeed: 0,
-              logisticR: 4,
               jitterBitDepth: 1,
               jitterFiniteLength: 8,
               jitterFiniteSeed: 0,
@@ -520,7 +519,7 @@ export default {
         const ctx = getAudioContext();
         if (e.subtype === "modulationwheelcoarse") {
           this.monophone.timbre.setTargetAtTime(e.value, safeNow(), 0.005);
-          this.noise.jitter.setTargetAtTime(e.value * 0.75, safeNow(), 0.005);
+          this.noise.timbre.setTargetAtTime(e.value, safeNow(), 0.005);
         }
       }
       this.midiInput.addListener("controlchange", controlChange.bind(this));
@@ -812,7 +811,6 @@ export default {
           bitDepth: 1,
           finiteLength: 8,
           finiteSeed: 0,
-          logisticR: 4,
           jitterBitDepth: 1,
           jitterFiniteLength: 8,
           jitterFiniteSeed: 0,

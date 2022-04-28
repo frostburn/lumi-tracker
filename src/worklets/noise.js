@@ -124,6 +124,10 @@ class Noise extends BaseProcessor {
         defaultValue: 0,
       },
       {
+        name: 'timbre',
+        defaultValue: 0,
+      },
+      {
         name: 'jitter',
         defaultValue: 0,
       },
@@ -136,6 +140,7 @@ class Noise extends BaseProcessor {
     this.phase = 0;
 
     this.model = rand;
+    this.modelType = "rand";
     this.jitterModel = rand;
 
     this.finite = new Finite();
@@ -178,7 +183,12 @@ class Noise extends BaseProcessor {
         loopStart: 0,
         data: [0],
       },
-    }
+      bias: {
+        linear: false,
+        loopStart: 0,
+        data: [0],
+      },
+    };
 
     this.messages = [];
     this.port.onmessage = this.onMessage.bind(this);
@@ -215,6 +225,7 @@ class Noise extends BaseProcessor {
       } else {
         this.model = rand;
       }
+      this.modelType = data.value;
     } else if (data.type === "jitterModel") {
       if (data.value === "uniform") {
         this.jitterModel = uniform;
@@ -243,8 +254,6 @@ class Noise extends BaseProcessor {
       this.finite.seed = data.value;
     } else if (data.type === "bitDepth") {
       this.bit.depth = data.value;
-    } else if (data.type === "logisticR") {
-      this.logistic.r = data.value;
     } else if (data.type === "jitterFiniteLength") {
       this.jitterFinite.length = data.value;
     } else if (data.type === "jitterFiniteSeed") {
@@ -267,8 +276,14 @@ class Noise extends BaseProcessor {
     }
   }
 
-  generateValue() {
+  generateValue(timbre) {
     let newValue = this.model();
+    if (this.modelType === "logistic") {
+      this.logistic.r = 3.55 + timbre * (4 - 3.55);
+    } else {
+      timbre = 16*timbre + EPSILON;
+      newValue = Math.sinh(newValue * timbre) / Math.sinh(timbre);
+    }
     let oldValue;
     for (let j = 0; j < this.diffs.length; ++j) {
       oldValue = this.diffs[j];
@@ -285,6 +300,7 @@ class Noise extends BaseProcessor {
 
     const natValues = parameters.nat;
     const jitterValues = parameters.jitter;
+    const timbreValues = parameters.timbre;
 
     const _dt = 1 / sampleRate;
 
@@ -317,11 +333,15 @@ class Noise extends BaseProcessor {
         if (this.phase > 1) {
           const remainder = (this.phase - 1) / this.speed;
 
-          this.generateValue();
+          const timbre = (
+            timbreValues[Math.min(timbreValues.length-1, i)] +
+            getTableValue(x, this.tables.timbre)
+          );
+          this.generateValue(timbre);
 
           const jitter = (
             jitterValues[Math.min(jitterValues.length-1, i)] +
-            getTableValue(x, this.tables.timbre)
+            getTableValue(x, this.tables.bias)
           );
           this.speed = jitter * this.jitterModel();
           if (this.jitterType === "pulseWidth") {

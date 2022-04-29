@@ -23,7 +23,7 @@ export default {
             const ctx = this.$refs.canvas.getContext('2d');
             ctx.lineWidth = 2;
             ctx.strokeStyle = "#000000";
-            ctx.clearRect(0, 0, this.width, this.height);
+            ctx.clearRect(-0.5, -0.5, this.width, this.height);
             if (this.analyser !== null) {
                 ctx.beginPath();
                 if (this.buffer.length < this.analyser.fftSize) {

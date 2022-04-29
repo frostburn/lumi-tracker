@@ -36,7 +36,7 @@ function smoothLog(phase, sharpness) {
 }
 
 function smoothRect(phase, sharpness, bias) {
-  return softRect(phase, Math.sqrt(sharpness), 0.25 - 0.245 * bias);
+  return softRect(phase, Math.sqrt(sharpness), 0.25 - 0.24 * bias);
 }
 
 function smoothTent(phase, sharpness, bias) {

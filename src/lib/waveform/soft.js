@@ -1,6 +1,7 @@
 import {sine, cosine, semisine, sawtooth, triangle, square} from "./basic.js";
 
 const EPSILON = 1e-6;
+const TWO_PER_PI = 2 / Math.PI;
 
 export function softSemisine(phase, sharpness) {
   if (sharpness < EPSILON) {
@@ -22,11 +23,10 @@ export function softSawtooth(phase, sharpness) {
     return sine(phase);
   }
   if (sharpness > 1 - EPSILON) {
-    sharpness = 1 - EPSILON;
     return sawtooth(phase);
   }
   return Math.atan(
-    sharpness * Math.sin(2*Math.PI * phase) / (1 + sharpness * Math.cos(2*Math.PI * phase))
+    sharpness * sine(phase) / (1 + sharpness * cosine(phase))
   ) / Math.asin(sharpness);
 }
 
@@ -85,12 +85,31 @@ export function softLog(phase, sharpness) {
 }
 
 export function softRect(phase, sharpness, separation) {
+  if (sharpness < EPSILON) {
+    return cosine(phase);
+  }
+  if (sharpness > 1 - EPSILON) {
+    return sawtooth(phase + separation) - sawtooth(phase - separation);
+  }
+  const sp = sharpness * sine(phase);
+  const ss = sine(separation);
+  const cp = sharpness * cosine(phase);
+  const cs = cosine(separation);
+  const a = sp*cs;
+  const b = cp*ss;
+  const c = cp*cs;
+  const d = sp*ss;
   return (
-    softSawtooth(phase + separation, sharpness) -
-    softSawtooth(phase - separation, sharpness)
-  ) * (0.5 + sharpness*0.5);
+      Math.atan((a + b) / (1 + c - d)) - Math.atan((a - b) / (1 + c + d))
+  ) * (0.5 + sharpness * (TWO_PER_PI - 0.5)) / (sharpness * (ss + (1 - ss) * sharpness));
+  // Slightly more readable version:
+  // return (
+  //   Math.atan(sharpness * sine(phase + separation) / (1 + sharpness * cosine(phase + separation))) -
+  //   Math.atan(sharpness * sine(phase - separation) / (1 + sharpness * cosine(phase - separation)))
+  // ) * (0.5 / sharpness + 2/Math.PI - 0.5) / (sine(separation) + (1 - sine(separation)) * sharpness);
 }
 
+// TODO: Inline and optimize
 export function softTent(phase, sharpness, separation) {
   return 0.5 * (
     softSemisine(phase + separation, sharpness) -

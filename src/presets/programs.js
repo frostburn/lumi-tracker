@@ -18,6 +18,44 @@ const PROGRAMS = {
             data: [0],
         },
     },
+    P1: {
+        name: "Timbre snap",
+        amplitude: {
+            linear: false,
+            data: [100],
+        },
+        timbre: {
+            linear: true,
+            data: [90, 40, 0],
+        },
+        bias: {
+            linear: false,
+            data: [0],
+        },
+        nat: {
+            linear: false,
+            data: [0],
+        },
+    },
+    P2: {
+        name: "Bias snap",
+        amplitude: {
+            linear: false,
+            data: [100],
+        },
+        timbre: {
+            linear: false,
+            data: [0],
+        },
+        bias: {
+            linear: true,
+            data: [90, 40, 0],
+        },
+        nat: {
+            linear: false,
+            data: [0],
+        },
+    },
     PS: {
         name: "Snare",
         amplitude: {

@@ -138,6 +138,8 @@ class Noise extends BaseProcessor {
     super();
     // Normalized time since last value change
     this.phase = 0;
+    // Lowpass state
+    this.amplitude = 1;
 
     this.model = rand;
     this.modelType = "rand";
@@ -302,20 +304,22 @@ class Noise extends BaseProcessor {
     const jitterValues = parameters.jitter;
     const timbreValues = parameters.timbre;
 
-    const _dt = 1 / sampleRate;
+    const _dt = this.getDt();
+    const dt = _dt * this.underSampling;
+    const a = this.getLowpass(dt);
+    const b = 1 - a;
 
     for (let i = 0; i < channel.length; i++) {
       if (this.holdIndex === 0) {
         this.triggerMessages(t);
         const x = this.tOnset / this.tableDelta;
 
-        const dt = _dt * this.underSampling;
-
         const frequency = Math.exp(
           natValues[Math.min(natValues.length-1, i)] +
           getTableValue(x, this.tables.nat)
         );
-        const amplitude = getTableValue(x, this.tables.amplitude);
+        const amplitudeTarget = getTableValue(x, this.tables.amplitude);
+        const amplitude = this.amplitude = this.amplitude * a + amplitudeTarget * b;
 
         const dp = this.speed * frequency * dt;
 

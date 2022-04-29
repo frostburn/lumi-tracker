@@ -1,3 +1,5 @@
+const LOWPASS_TIME_CONSTANT = 0.001;
+
 class BaseProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -65,6 +67,14 @@ class BaseProcessor extends AudioWorkletProcessor {
     }
 
     return true;
+  }
+
+  getDt() {
+    return 1 / sampleRate;
+  }
+
+  getLowpass(dt) {
+    return 0.5**(dt / LOWPASS_TIME_CONSTANT);
   }
 }
 

@@ -80,6 +80,10 @@ class Monophone extends BaseProcessor {
     super();
     // Oscillator phase
     this.phase = 0;
+    // Low-pass state
+    this.timbre = 0;
+    this.bias = 0;
+    this.amplitude = 1;
 
     this.waveform = smoothSemisine;
 
@@ -160,7 +164,9 @@ class Monophone extends BaseProcessor {
     const timbreValues = parameters.timbre;
     const biasValues = parameters.bias;
 
-    const dt = 1 / sampleRate;
+    const dt = this.getDt();
+    const a = this.getLowpass(dt);
+    const b = 1 - a;
 
     for (let i = 0; i < channel.length; i++) {
       this.triggerMessages(t);
@@ -170,15 +176,19 @@ class Monophone extends BaseProcessor {
         natValues[Math.min(natValues.length-1, i)] +
         getTableValue(x, this.tables.nat)
       );
-      const timbre = (
+      const timbreTarget = (
         timbreValues[Math.min(timbreValues.length-1, i)] +
         getTableValue(x, this.tables.timbre)
       );
-      const bias = (
+      const biasTarget = (
         biasValues[Math.min(biasValues.length-1, i)] +
         getTableValue(x, this.tables.bias)
       );
-      const amplitude = getTableValue(x, this.tables.amplitude);
+      const amplitudeTarget = getTableValue(x, this.tables.amplitude);
+
+      const timbre = this.timbre = this.timbre * a + timbreTarget * b;
+      const bias = this.bias = this.bias * a + biasTarget * b;
+      const amplitude = this.amplitude = this.amplitude * a + amplitudeTarget * b;
 
       // TODO: Make anti-aliasing configurable
       const dp = frequency * dt;

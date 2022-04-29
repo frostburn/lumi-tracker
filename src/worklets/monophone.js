@@ -19,8 +19,8 @@ function smoothSquare(phase, sharpness) {
   return softSquare(phase, Math.sqrt(sharpness));
 }
 
-function smoothSinh(phase, sharpness) {
-  return softSinh(phase, sharpness*12);
+function smoothSinh(phase, sharpness, bias) {
+  return softSinh(phase, sharpness*12, 0.25 - 0.249 * bias);
 }
 
 function smoothCosh(phase, sharpness) {
@@ -43,7 +43,7 @@ function smoothTent(phase, sharpness, bias) {
   return softTent(phase, sharpness, 0.25 - 0.245 * bias);
 }
 
-const BIASABLE = [lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35, smoothPulse, smoothTent];
+const BIASABLE = [lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35, smoothPulse, smoothTent, smoothSinh];
 
 function biased(phase, x) {
   phase -= Math.floor(phase + 0.5);

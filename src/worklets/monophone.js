@@ -1,6 +1,6 @@
 import BaseProcessor from "./base.js";
 import { getTableValue } from "../lib/table.js";
-import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh, softLog, softRect, softTent } from "../lib/waveform/soft.js";
+import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh, softLog, softPulse, softTent } from "../lib/waveform/soft.js";
 import { lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35 } from "../lib/waveform/lissajous.js";
 
 function smoothSemisine(phase, sharpness) {
@@ -35,15 +35,15 @@ function smoothLog(phase, sharpness) {
   return softLog(phase, 0.99*sharpness);
 }
 
-function smoothRect(phase, sharpness, bias) {
-  return softRect(phase, Math.sqrt(sharpness), 0.25 - 0.24 * bias);
+function smoothPulse(phase, sharpness, bias) {
+  return softPulse(phase, Math.sqrt(sharpness), 0.25 - 0.24 * bias);
 }
 
 function smoothTent(phase, sharpness, bias) {
   return softTent(phase, sharpness, 0.25 - 0.245 * bias);
 }
 
-const BIASABLE = [lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35, smoothRect, smoothTent];
+const BIASABLE = [lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35, smoothPulse, smoothTent];
 
 function biased(phase, x) {
   phase -= Math.floor(phase + 0.5);
@@ -129,8 +129,8 @@ class Monophone extends BaseProcessor {
         this.waveform = smoothTanh;
       } else if (data.value === "log") {
         this.waveform = smoothLog;
-      } else if (data.value === "rect") {
-        this.waveform = smoothRect;
+      } else if (data.value === "pulse") {
+        this.waveform = smoothPulse;
       } else if (data.value === "tent") {
         this.waveform = smoothTent;
       } else if (data.value === "Lissajous 2 1") {

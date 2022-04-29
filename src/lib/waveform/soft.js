@@ -84,7 +84,7 @@ export function softLog(phase, sharpness) {
   return 2*((Math.log1p(sine(phase) * sharpness) - min) / (Math.log1p(sharpness) - min)) - 1;
 }
 
-export function softRect(phase, sharpness, separation) {
+export function softPulse(phase, sharpness, separation) {
   if (sharpness < EPSILON) {
     return cosine(phase);
   }

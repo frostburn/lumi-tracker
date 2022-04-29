@@ -109,10 +109,19 @@ export function softPulse(phase, sharpness, separation) {
   // ) * (0.5 / sharpness + 2/Math.PI - 0.5) / (sine(separation) + (1 - sine(separation)) * sharpness);
 }
 
-// TODO: Inline and optimize
 export function softTent(phase, sharpness, separation) {
-  return 0.5 * (
-    softSemisine(phase + separation, sharpness) -
-    softSemisine(phase - separation, sharpness)
-  ) / sine(separation);
+  if (sharpness < EPSILON) {
+    return -sine(phase);
+  }
+  if (sharpness >= 1) {
+    return 0.5 * (semisine(phase + separation) - semisine(phase - separation)) / sine(separation);
+  }
+  const s1p = 1 + sharpness;
+  const s1m = 1 - sharpness;
+  const pps = Math.PI * (phase + separation);
+  const pms = Math.PI * (phase - separation);
+  return (
+    Math.hypot(s1p * Math.cos(pps), s1m * Math.sin(pps)) -
+    Math.hypot(s1p * Math.cos(pms), s1m * Math.sin(pms))
+  ) / (2 * sharpness * sine(separation));
 }

@@ -26,8 +26,8 @@ export function availableOscillatorWaveforms() {
 
 export function availableWaveforms() {
     return [
-        "semisine", "square", "sawtooth", "triangle",
-        "sinh", "cosh", "tanh", "log", "pulse", "tent",
+        "pulse", "tent", "semisine", "sawtooth", "square", "triangle",
+        "sinh", "cosh", "tanh", "log",
         "Lissajous 2 1", "Lissajous 1 3", "Lissajous 2 3", "Lissajous 2 5", "Lissajous 3 4", "Lissajous 3 5"
     ];
 }

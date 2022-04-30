@@ -1,26 +1,30 @@
 import BaseProcessor from "./base.js";
 import { getTableValue } from "../lib/table.js";
 import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh, softLog, softPulse, softTent } from "../lib/waveform/soft.js";
-import { lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35 } from "../lib/waveform/lissajous.js";
+import { lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35, clip } from "../lib/waveform/lissajous.js";
+
+function sqrt(x) {
+  return Math.sqrt(Math.max(0, x));
+}
 
 function smoothSemisine(phase, sharpness) {
   return softSemisine(phase - 0.25, sharpness);
 }
 
 function smoothSawtooth(phase, sharpness) {
-  return softSawtooth(phase, Math.sqrt(sharpness));
+  return softSawtooth(phase, sqrt(sharpness));
 }
 
 function smoothTriangle(phase, sharpness) {
-  return softTriangle(phase, Math.sqrt(sharpness));
+  return softTriangle(phase, sqrt(sharpness));
 }
 
 function smoothSquare(phase, sharpness) {
-  return softSquare(phase, Math.sqrt(sharpness));
+  return softSquare(phase, sqrt(sharpness));
 }
 
 function smoothSinh(phase, sharpness, bias) {
-  return softSinh(phase, sharpness*12, 0.25 - 0.249 * bias);
+  return softSinh(phase, sharpness*12, 0.25 - 0.2499 * bias);
 }
 
 function smoothCosh(phase, sharpness) {
@@ -32,11 +36,11 @@ function smoothTanh(phase, sharpness) {
 }
 
 function smoothLog(phase, sharpness) {
-  return softLog(phase, 0.99*sharpness);
+  return softLog(phase, 0.99*Math.min(1, sharpness));
 }
 
 function smoothPulse(phase, sharpness, bias) {
-  return softPulse(phase, Math.sqrt(sharpness), 0.25 - 0.24 * bias);
+  return softPulse(phase, sqrt(sharpness), 0.25 - 0.24 * bias);
 }
 
 function smoothTent(phase, sharpness, bias) {
@@ -187,7 +191,7 @@ class Monophone extends BaseProcessor {
       const amplitudeTarget = getTableValue(x, this.tables.amplitude);
 
       const timbre = this.timbre = this.timbre * a + timbreTarget * b;
-      const bias = this.bias = this.bias * a + biasTarget * b;
+      const bias = this.bias = clip(this.bias * a + biasTarget * b, 0, 1);
       const amplitude = this.amplitude = this.amplitude * a + amplitudeTarget * b;
 
       // TODO: Make anti-aliasing configurable

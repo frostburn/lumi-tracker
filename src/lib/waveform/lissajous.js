@@ -1,7 +1,7 @@
 const EPSILON = 1e-6;
 const TWO_PI = 2 * Math.PI;
 
-function clip(x, low, high) {
+export function clip(x, low, high) {
     if (x < low) {
         return low;
     }

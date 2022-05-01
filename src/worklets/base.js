@@ -1,8 +1,8 @@
 const LOWPASS_TIME_CONSTANT = 0.001;
 
 class BaseProcessor extends AudioWorkletProcessor {
-  constructor() {
-    super();
+  constructor(options) {
+    super(options);
     // Time since last onset
     this.tOnset = 0;
     // Inverse speed of parameter change

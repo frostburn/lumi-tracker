@@ -11,7 +11,7 @@ import TimeDomainVisualizer from "./components/TimeDomainVisualizer.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, REFERENCE_OCTAVE, ratioToCents, unicodeLength, unicodeSplit } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, setAudioDelay, safeNow } from "./audio.js";
-import { Monophone, availableWaveforms, loadAudioWorklets, Noise, availableNoiseModels } from "./audio.js";
+import { Monophone, availableWaveforms, loadAudioWorklets, Noise, availableNoiseModels, FM, availableOscillatorWaveforms } from "./audio.js";
 import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
 import PROGRAMS from "./presets/programs.js";
@@ -35,6 +35,7 @@ export default {
       globalGain: null,  // Initialized on mounting for convenience
       monophone: null,  // Can only be initialized on mounting
       noise: null,  // same
+      fm: null,  // same
       analyser: null,
       activeInstrument: null,
       activeProgram: "P0",
@@ -81,13 +82,28 @@ export default {
         l: 2,
         s: 1,
         equave: 2,
-        frames: [[0, 0]],
+        frames: [[0, 0, 0]],
         columnHeight: DEFAULT_COLUMN_HEIGHT,
         tracks: [
           {
             instrument: {
               type: 'monophone',
               waveform: 'pulse',
+              frequencyGlide: 5,
+              attack: 10,
+              release: 20,
+              tableDelta: 20,
+            },
+            patterns: [
+              Array(DEFAULT_COLUMN_HEIGHT).fill(null),
+            ],
+          },
+          {
+            instrument: {
+              type: 'fm',
+              waveform: 'sine',
+              modulatorFactor: 1,
+              carrierFactor: 1,
               frequencyGlide: 5,
               attack: 10,
               release: 20,
@@ -145,6 +161,8 @@ export default {
           this.configureInstrument(this.monophone, newValue);
         } else if (newValue.type === "noise") {
           this.configureInstrument(this.noise, newValue);
+        } else if (newValue.type === "fm") {
+          this.configureInstrument(this.fm, newValue);
         }
       },
       deep: true,
@@ -153,6 +171,7 @@ export default {
       if (newValue in PROGRAMS) {
         this.monophone.setProgram(PROGRAMS[newValue]);
         this.noise.setProgram(PROGRAMS[newValue]);
+        this.fm.setProgram(PROGRAMS[newValue]);
       }
     },
     'song.columnHeight': {
@@ -182,6 +201,9 @@ export default {
         if (this.monophone !== null) {
           this.monophone.timbre.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
         }
+        if (this.fm !== null) {
+          this.fm.timbre.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
       }
     },
     'controls.bias': {
@@ -191,6 +213,9 @@ export default {
         }
         if (this.monophone !== null) {
           this.monophone.bias.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+        if (this.fm !== null) {
+          this.fm.bias.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
         }
       }
     },
@@ -202,6 +227,9 @@ export default {
         if (this.monophone !== null) {
           this.monophone.vibratoDepth.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
         }
+        if (this.fm !== null) {
+          this.fm.vibratoDepth.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
       }
     },
     'controls.vibratoFrequency': {
@@ -211,6 +239,9 @@ export default {
         }
         if (this.monophone !== null) {
           this.monophone.vibratoFrequency.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+        if (this.fm !== null) {
+          this.fm.vibratoFrequency.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
         }
       }
     },
@@ -310,6 +341,10 @@ export default {
     noiseModels() {
       return availableNoiseModels();
     },
+    oscillatorWaveforms() {
+      this.fm;  // XXX: Hack to retrigger computation after periodic waves have been calculated
+      return availableOscillatorWaveforms();
+    },
     selection() {
       if (this.selectStart === null || this.selectStop === null) {
         return undefined;
@@ -402,6 +437,8 @@ export default {
           instrument = new Noise();
         } else if (track.instrument.type === "monophone") {
           instrument = new Monophone();
+        } else if (track.instrument.type === "fm") {
+          instrument = new FM();
         }
         this.configureInstrument(instrument, track.instrument);
         instrument.connect(this.globalGain);
@@ -497,6 +534,8 @@ export default {
           return this.monophone.noteOn(frequency, velocity / 0xFF);
         } else if (this.activeInstrument.type === "noise") {
           return this.noise.noteOn(frequency, velocity / 0xFF);
+        } else if (this.activeInstrument.type === "fm") {
+          return this.fm.noteOn(frequency, velocity / 0xFF);
         }
       } else if (this.inputMode === "note" && this.activeRow !== null) {
         if (this.activeRow >= 0 && this.activeRow < this.song.columnHeight) {
@@ -562,6 +601,7 @@ export default {
       function pitchBend(e) {
         this.monophone.detune.setTargetAtTime(this.pitchBendDepth * e.value, safeNow(), 0.0001);
         this.noise.detune.setTargetAtTime(this.pitchBendDepth * e.value, safeNow(), 0.0001);
+        this.fm.detune.setTargetAtTime(this.pitchBendDepth * e.value, safeNow(), 0.0001);
       }
       this.midiInput.addListener("pitchbend", pitchBend.bind(this));
 
@@ -978,6 +1018,7 @@ export default {
     await loadAudioWorklets();
     this.monophone = new Monophone();
     this.noise = new Noise();
+    this.fm = new FM();
     this.configureInstrument(this.monophone, this.activeInstrument);
 
     const ctx = getAudioContext();
@@ -989,6 +1030,7 @@ export default {
 
     this.monophone.connect(this.globalGain);
     this.noise.connect(this.globalGain);
+    this.fm.connect(this.globalGain);
   },
   unmounted() {
     this.computerKeyboard.removeEventListener("keydown", this.computerKeydown);
@@ -999,6 +1041,9 @@ export default {
     }
     if (this.noise !== null) {
       this.noise.dispose();
+    }
+    if (this.fm !== null) {
+      this.fm.dispose();
     }
     this.globalGain.disconnect();
     window.removeEventListener("mouseup", this.onMouseUp);
@@ -1088,6 +1133,9 @@ export default {
         </select>
         <select v-model="track.instrument.model" @focus="activeInstrument = track.instrument" v-if="track.instrument.type === 'noise'">
           <option v-for="model of noiseModels">{{ model }}</option>
+        </select>
+        <select v-model="track.instrument.waveform" @focus="activeInstrument = track.instrument" v-if="track.instrument.type === 'fm'">
+          <option v-for="waveform of oscillatorWaveforms">{{ waveform }}</option>
         </select>
         <span class="instrument-config" @click="openInstrumentModal(track.instrument)">⚙</span>
       </th>

@@ -33,6 +33,12 @@ export default {
             <input id="release" type="number" v-model="instrument.release" />
             <label for="table-delta"> Table Delta: </label>
             <input id="table-delta" type="number" min="1" v-model="instrument.tableDelta" />
+            <template v-if="instrument.type === 'fm'">
+              <label for="modulator-factor"> Modulator Factor: </label>
+              <input id="modulator-factor" type="number" v-model="instrument.modulatorFactor">
+              <label for="carrier-factor"> Carrier Factor: </label>
+              <input id="carrier-factor" type="number" v-model="instrument.carrierFactor">
+            </template>
             <template v-if="instrument.type === 'noise'">
               <label for="jitter-model"> Jitter Model: </label>
               <select id="jitter-model" v-model="instrument.jitterModel">

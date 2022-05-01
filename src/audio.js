@@ -2,6 +2,7 @@ import { ratioToCents } from "./util.js";
 import PROGRAMS from "./presets/programs.js";
 import noiseWorkletURL from "/src/worklets/noise.js?url"
 import monophoneWorkletURL from "/src/worklets/monophone.js?url"
+import modulatorWorkletURL from "/src/worklets/modulator.js?url"
 
 let AUDIO_CTX;
 // WebAudio API especially on Firefox doesn't perfectly sync AUDIO_CTX.currentTime
@@ -14,6 +15,7 @@ const OSCILLATOR_BANK = [];
 // Not sure about AudioWorkletNode either so let's play it safe and bank them as well.
 const NOISE_BANK = [];
 const MONOPHONE_BANK = [];
+const MODULATOR_BANK = [];
 
 const DEFAULT_OSCILLATOR_WAVEFORMS = ["sine", "square", "sawtooth", "triangle"];
 const PERIODIC_WAVES = {};
@@ -58,6 +60,7 @@ export async function loadAudioWorklets() {
     // Relative to index.html
     await ctx.audioWorklet.addModule(noiseWorkletURL);
     await ctx.audioWorklet.addModule(monophoneWorkletURL);
+    await ctx.audioWorklet.addModule(modulatorWorkletURL);
 }
 
 export function suspendAudio() {
@@ -171,6 +174,34 @@ function disposeMonophone(monophone) {
     monophone.parameters.get("bias").cancelScheduledValues(ctx.currentTime);
     monophone.disconnect();
     MONOPHONE_BANK.push(monophone);
+}
+
+function obtainModulator(modulatorFactor=1, carrierFactor=1, tableDelta=0.02, tables=PROGRAMS.P0) {
+    const ctx = getAudioContext();
+    let modulator;
+    if (MODULATOR_BANK.length) {
+        modulator = MODULATOR_BANK.pop();
+    } else {
+        modulator = new AudioWorkletNode(ctx, "modulator", {numberOfOutputs: 2});
+    }
+    modulator.parameters.get("timbre").setValueAtTime(0, ctx.currentTime);
+    modulator.parameters.get("bias").setValueAtTime(0, ctx.currentTime);
+    modulator.port.postMessage({ type: "modulatorFactor", value: modulatorFactor });
+    modulator.port.postMessage({ type: "carrierFactor", value: carrierFactor });
+    modulator.port.postMessage({ type: "tableDelta", value: tableDelta });
+    modulator.port.postMessage({ type: "tables", value: tables });
+
+    return modulator;
+}
+
+function disposeModulator(modulator) {
+    const ctx = getAudioContext();
+    modulator.port.postMessage({type: "cancel"});
+    modulator.parameters.get("nat").cancelScheduledValues(ctx.currentTime);
+    modulator.parameters.get("timbre").cancelScheduledValues(ctx.currentTime);
+    modulator.parameters.get("bias").cancelScheduledValues(ctx.currentTime);
+    modulator.disconnect();
+    MODULATOR_BANK.push(modulator);
 }
 
 export function scheduleAction(when, action) {
@@ -553,5 +584,38 @@ export class Monophone extends MonophonicBase {
     dispose() {
         super.dispose();
         disposeMonophone(this.generator);
+    }
+}
+
+export class FM extends MonophonicBase {
+    constructor(frequencyGlide=0.001, attack=0.001, release=0.001) {
+        super(frequencyGlide, attack, release);
+        const ctx = getAudioContext();
+        this.generator = obtainModulator();
+        this.carrier = obtainOscillator();
+        this.carrier.frequency.setValueAtTime(0, ctx.currentTime);
+        this.generator.connect(this.carrier.frequency, 0);
+        this.timbre = this.generator.parameters.get("timbre");
+        this.bias = this.generator.parameters.get("bias");
+        this._centsToNats.connect(this.generator.parameters.get("nat"));
+        this.amplitudeEnvelope = ctx.createGain();
+        this.amplitudeEnvelope.gain.setValueAtTime(0, ctx.currentTime);
+        this.generator.connect(this.amplitudeEnvelope.gain, 1);
+        this.carrier.connect(this.amplitudeEnvelope).connect(this.envelope);
+    }
+
+    setFullConfig(data) {
+        super.setFullConfig(data);
+        ["modulatorFactor", "carrierFactor", "tableDelta"].forEach(type => {
+            this.setConfig({ type, value: data[type] });
+        });
+        setOscillatorWaveform(this.carrier, data.waveform);
+    }
+
+    dispose() {
+        super.dispose();
+        disposeModulator(this.generator);
+        disposeOscillator(this.carrier);
+        this.amplitudeEnvelope.disconnect();
     }
 }

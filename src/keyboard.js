@@ -87,7 +87,7 @@ export class Keyboard {
     }
 
     keydown(event) {
-        if (event.ctrlKey) {
+        if (event.ctrlKey || event.altKey || event.metaKey || event.repeat) {
             return;
         }
         if (event.key == "Shift") {

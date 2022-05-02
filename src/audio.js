@@ -176,7 +176,7 @@ function disposeMonophone(monophone) {
     MONOPHONE_BANK.push(monophone);
 }
 
-function obtainModulator(modulatorFactor=1, carrierFactor=1, tableDelta=0.02, tables=PROGRAMS.P0) {
+function obtainModulator(modulatorFactor=1, carrierFactor=1, differentiated=false, tableDelta=0.02, tables=PROGRAMS.P0) {
     const ctx = getAudioContext();
     let modulator;
     if (MODULATOR_BANK.length) {
@@ -188,6 +188,7 @@ function obtainModulator(modulatorFactor=1, carrierFactor=1, tableDelta=0.02, ta
     modulator.parameters.get("bias").setValueAtTime(0, ctx.currentTime);
     modulator.port.postMessage({ type: "modulatorFactor", value: modulatorFactor });
     modulator.port.postMessage({ type: "carrierFactor", value: carrierFactor });
+    modulator.port.postMessage({ type: "differentiated", value: differentiated });
     modulator.port.postMessage({ type: "tableDelta", value: tableDelta });
     modulator.port.postMessage({ type: "tables", value: tables });
 
@@ -606,7 +607,7 @@ export class FM extends MonophonicBase {
 
     setFullConfig(data) {
         super.setFullConfig(data);
-        ["modulatorFactor", "carrierFactor", "tableDelta"].forEach(type => {
+        ["modulatorFactor", "carrierFactor", "differentiated", "tableDelta"].forEach(type => {
             this.setConfig({ type, value: data[type] });
         });
         setOscillatorWaveform(this.carrier, data.waveform);

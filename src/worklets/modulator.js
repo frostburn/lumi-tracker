@@ -28,6 +28,7 @@ class Modulator extends BaseProcessor {
     this.phase = 0;
     this.modulatorFactor = 1;
     this.carrierFactor = 1;
+    this.differentiated = false;
     // Low-pass state
     this.timbre = 0;
     this.bias = 0;
@@ -66,6 +67,8 @@ class Modulator extends BaseProcessor {
       this.modulatorFactor = data.value;
     } else if (data.type === "carrierFactor") {
       this.carrierFactor = data.value;
+    } else if (data.type === "differentiated") {
+      this.differentiated = data.value;
     } else {
       throw `Unrecognized message ${data.type}`;
     }
@@ -108,8 +111,13 @@ class Modulator extends BaseProcessor {
 
       // TODO: Configure anti-alias
       const dp = frequency * dt * this.modulatorFactor;
-      const modulator = softTriangle(this.phase, bias) + softTriangle(this.phase + 0.5 * dp, bias);
-      frequencyChannel[i] = frequency * (this.carrierFactor + modulator * timbre * 3);
+      let modulator;
+      if (this.differentiated) {
+        modulator = (softTriangle(this.phase + dp, bias) - softTriangle(this.phase, bias))/dp * 2;
+      } else {
+        modulator = (softTriangle(this.phase, bias) + softTriangle(this.phase + 0.5 * dp, bias)) * 4;
+      }
+      frequencyChannel[i] = frequency * (this.carrierFactor + modulator * timbre);
       envelopeChannel[i] = amplitude;
 
       t += dt;

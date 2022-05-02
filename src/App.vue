@@ -104,6 +104,7 @@ export default {
               waveform: 'sine',
               modulatorFactor: 1,
               carrierFactor: 1,
+              differentiated: false,
               frequencyGlide: 5,
               attack: 10,
               release: 20,

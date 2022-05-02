@@ -38,6 +38,8 @@ export default {
               <input id="modulator-factor" type="number" v-model="instrument.modulatorFactor">
               <label for="carrier-factor"> Carrier Factor: </label>
               <input id="carrier-factor" type="number" v-model="instrument.carrierFactor">
+              <label for="differentiated"> Modulator Differentiated: </label>
+              <input id="differentiated" type="checkbox" v-model="instrument.differentiated" />
             </template>
             <template v-if="instrument.type === 'noise'">
               <label for="jitter-model"> Jitter Model: </label>

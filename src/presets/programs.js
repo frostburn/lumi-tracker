@@ -56,6 +56,82 @@ const PROGRAMS = {
             data: [0],
         },
     },
+    P3: {
+        name: "Timbre attack",
+        amplitude: {
+            linear: false,
+            data: [100],
+        },
+        timbre: {
+            linear: true,
+            data: [0, 40, 90],
+        },
+        bias: {
+            linear: false,
+            data: [0],
+        },
+        nat: {
+            linear: false,
+            data: [0],
+        },
+    },
+    P4: {
+        name: "Bias attack",
+        amplitude: {
+            linear: false,
+            data: [100],
+        },
+        timbre: {
+            linear: false,
+            data: [0],
+        },
+        bias: {
+            linear: true,
+            data: [0, 40, 90],
+        },
+        nat: {
+            linear: false,
+            data: [0],
+        },
+    },
+    P5: {
+        name: "Timbre pluck",
+        amplitude: {
+            linear: true,
+            data: [100, 81, 66, 53, 43, 35, 28, 23, 19, 15, 12, 10, 8, 6, 5, 4, 3, 2, 1, 0],
+        },
+        timbre: {
+            linear: true,
+            data: [90, 73, 59, 48, 39, 31, 25, 21, 17, 14, 11, 9, 7, 6, 5, 4, 3, 2, 1, 0],
+        },
+        bias: {
+            linear: false,
+            data: [0],
+        },
+        nat: {
+            linear: false,
+            data: [0],
+        },
+    },
+    P6: {
+        name: "Bias pluck",
+        amplitude: {
+            linear: true,
+            data: [100, 81, 66, 53, 43, 35, 28, 23, 19, 15, 12, 10, 8, 6, 5, 4, 3, 2, 1, 0],
+        },
+        timbre: {
+            linear: false,
+            data: [0],
+        },
+        bias: {
+            linear: true,
+            data: [90, 73, 59, 48, 39, 31, 25, 21, 17, 14, 11, 9, 7, 6, 5, 4, 3, 2, 1, 0],
+        },
+        nat: {
+            linear: false,
+            data: [0],
+        },
+    },
     PS: {
         name: "Snare",
         amplitude: {

@@ -89,6 +89,7 @@ export default {
             instrument: {
               type: 'monophone',
               waveform: 'pulse',
+              differentiated: false,
               frequencyGlide: 5,
               attack: 10,
               release: 20,

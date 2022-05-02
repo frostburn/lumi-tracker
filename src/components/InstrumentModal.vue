@@ -33,6 +33,10 @@ export default {
             <input id="release" type="number" v-model="instrument.release" />
             <label for="table-delta"> Table Delta: </label>
             <input id="table-delta" type="number" min="1" v-model="instrument.tableDelta" />
+            <template v-if="instrument.type == 'monophone'">
+              <label for="differentiated"> Differentiated: </label>
+              <input id="differentiated" type="checkbox" v-model="instrument.differentiated" />
+            </template>
             <template v-if="instrument.type === 'fm'">
               <label for="modulator-factor"> Modulator Factor: </label>
               <input id="modulator-factor" type="number" v-model="instrument.modulatorFactor">

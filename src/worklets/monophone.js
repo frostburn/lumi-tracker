@@ -3,6 +3,8 @@ import { getTableValue } from "../lib/table.js";
 import { softSemisine, softSawtooth, softTriangle, softSquare, softSinh, softCosh, softTanh, softLog, softPulse, softTent } from "../lib/waveform/soft.js";
 import { lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35, clip } from "../lib/waveform/lissajous.js";
 
+const TWO_PI = 2 * Math.PI;
+
 function sqrt(x) {
   return Math.sqrt(Math.max(0, x));
 }
@@ -84,12 +86,14 @@ class Monophone extends BaseProcessor {
     super();
     // Oscillator phase
     this.phase = 0;
+    this.differentiated = false;
     // Low-pass state
     this.timbre = 0;
     this.bias = 0;
     this.amplitude = 1;
 
     this.waveform = smoothSemisine;
+    this.biasable = BIASABLE.includes(this.waveform);
 
     this.tables = {
       amplitude: {
@@ -156,6 +160,9 @@ class Monophone extends BaseProcessor {
       } else {
         throw `Unrecognized waveform ${data.value}`;
       }
+      this.biasable = BIASABLE.includes(this.waveform);
+    } else if (data.type === "differentiated") {
+      this.differentiated = data.value;
     } else {
       throw `Unrecognized message ${data.type}`;
     }
@@ -197,13 +204,23 @@ class Monophone extends BaseProcessor {
       // TODO: Make anti-aliasing configurable
       const dp = frequency * dt;
       let wf;
-      if (BIASABLE.includes(this.waveform)) {
-        wf = (this.waveform(this.phase, timbre, bias) + this.waveform(this.phase + 0.5*dp, timbre, bias)) * 0.5;
+      if (this.biasable) {
+        if (this.differentiated) {
+          wf = (this.waveform(this.phase + dp, timbre, bias) - this.waveform(this.phase, timbre, bias)) / (dp * TWO_PI);
+        } else {
+          wf = (this.waveform(this.phase, timbre, bias) + this.waveform(this.phase + 0.5*dp, timbre, bias)) * 0.5;
+        }
       } else {
         const b = 0.25 + 0.25*bias;
-        const p0 = biased(this.phase, b);
-        const p1 = biased(this.phase + 0.5*dp, b);
-        wf = (this.waveform(p0, timbre) + this.waveform(p1, timbre)) * 0.5;
+        if (this.differentiated) {
+          const p0 = biased(this.phase, b);
+          const p1 = biased(this.phase + dp, b);
+          wf = (this.waveform(p1, timbre) - this.waveform(p0, timbre)) / (dp * TWO_PI);
+        } else {
+          const p0 = biased(this.phase, b);
+          const p1 = biased(this.phase + 0.5*dp, b);
+          wf = (this.waveform(p0, timbre) + this.waveform(p1, timbre)) * 0.5;
+        }
       }
       channel[i] = wf * amplitude;
 

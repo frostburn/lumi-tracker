@@ -148,7 +148,7 @@ function disposeNoise(noise) {
 }
 
 function obtainMonophone(
-        waveform="semisine", tableDelta=0.02, tables=PROGRAMS.P0,
+        waveform="semisine", differentiated=false, tableDelta=0.02, tables=PROGRAMS.P0,
     ) {
     const ctx = getAudioContext();
     let monophone;
@@ -160,6 +160,7 @@ function obtainMonophone(
     monophone.parameters.get("timbre").setValueAtTime(0, ctx.currentTime);
     monophone.parameters.get("bias").setValueAtTime(0, ctx.currentTime);
     monophone.port.postMessage({ type: "waveform", value: waveform });
+    monophone.port.postMessage({ type: "differentiated", value: differentiated });
     monophone.port.postMessage({ type: "tableDelta", value: tableDelta });
     monophone.port.postMessage({ type: "tables", value: tables });
 
@@ -577,7 +578,7 @@ export class Monophone extends MonophonicBase {
 
     setFullConfig(data) {
         super.setFullConfig(data);
-        ["waveform", "tableDelta"].forEach(type => {
+        ["waveform", "differentiated", "tableDelta"].forEach(type => {
             this.setConfig({ type, value: data[type] });
         });
     }

@@ -226,32 +226,36 @@ export function scheduleAction(when, action) {
 // https://github.com/SeanArchibald/scale-workshop/blob/master/src/js/synth/Synth.js
 function createWaveforms() {
     PERIODIC_WAVES["warm1"] = AUDIO_CTX.createPeriodicWave(
-        new Float32Array([0, 10, 2, 2, 2, 1, 1, 0.5, 0.1, 0.02]),
-        new Float32Array([0,  0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.00])
+        new Float32Array([0,  0,  0, 0,  0, 0,  0.0, 0.00, 0.0, 0.00]),
+        new Float32Array([0, 10, -2, 2, -2, 1, -0.9, 0.45, 0.1, 0.02])
     )
     PERIODIC_WAVES["warm2"] = AUDIO_CTX.createPeriodicWave(
-        new Float32Array([0, 10, 5, 3.33, 2, 1, 0.2, 0.1, 0.02]),
-        new Float32Array([0,  0, 0, 0.00, 0, 0, 0.0, 0.0, 0.00])
+        new Float32Array([0, 10, -5, 3.33, 2, -1, 0.2, 0.1, -0.02]),
+        new Float32Array([0,  0,  0, 0.00, 0,  0, 0.0, 0.0,  0.00]),
     )
     PERIODIC_WAVES["warm3"] = AUDIO_CTX.createPeriodicWave(
-        new Float32Array([0, 10, 5, 5, 3, 0.2, 0.1, 0.02]),
-        new Float32Array([0,  0, 0, 0, 0, 0.0, 0.0, 0.00])
+        new Float32Array([0, 10, -5, 5, 3, -0.2, 0.1, 0.02]),
+        new Float32Array([0,  0,  0, 0, 0,  0.0, 0.0, 0.00])
     )
     PERIODIC_WAVES["warm4"] = AUDIO_CTX.createPeriodicWave(
         new Float32Array([0, 10, 2, 2, 1, 0.1, 0.02]),
         new Float32Array([0,  0, 0, 0, 0, 0.0, 0.00])
     )
     PERIODIC_WAVES["octaver"] = AUDIO_CTX.createPeriodicWave(
-        new Float32Array([0,100,50,0,33,0,0,0,25,0,0,0,0,0,0,0,16]),
+        new Float32Array([0,100,-50,0,33,0,0,0,25,0,0,0,0,0,0,0,-16]),
         new Float32Array([0,  0, 0,0, 0,0,0,0, 0,0,0,0,0,0,0,0, 0])
     )
+    PERIODIC_WAVES["tritaver"] = AUDIO_CTX.createPeriodicWave(
+        new Float32Array([0,100,0,-50,0,0,0,0,0,33,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-5]),
+        new Float32Array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+    )
     PERIODIC_WAVES["brightness"] = AUDIO_CTX.createPeriodicWave(
-        new Float32Array([0,10,0,3,3,3,3,3,3,3,3,3,3,1,1,1,1,1,.75,.5,.2,.1,0.02]),
-        new Float32Array([0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,.00,.0,.0,.0,0.00])
+        new Float32Array([0, 0,0,0 ,0, 0,0, 0,0, 0,0, 0,0, 0,0, 0,0, 0,.00, .0,.0, .0,0.00]),
+        new Float32Array([0,10,0,-3,3,-3,3,-3,3,-3,3,-3,3,-1,1,-1,1,-1,.75,-.5,.2,-.1,0.02])
     )
     PERIODIC_WAVES["harmonicbell"] = AUDIO_CTX.createPeriodicWave(
-        new Float32Array([0, 10, 2, 2, 2, 2,0,0,0,0,0,7]),
-        new Float32Array([0,  0, 0, 0, 0, 0,0,0,0,0,0,0])
+        new Float32Array([0,  0, 0, 0, 0, 0,0,0,0,0,0,0]),
+        new Float32Array([0, 10, -2, 2, 2, 2,0,0,0,0,0,-7])
     )
 
     // DC-blocked semisine
@@ -261,8 +265,8 @@ function createWaveforms() {
         semisineCosineComponents[n] = 1 / (1 - 4*n*n);
     }
     PERIODIC_WAVES["semisine"] = AUDIO_CTX.createPeriodicWave(
+        semisineCosineComponents,
         semisineSineComponents,
-        semisineCosineComponents
     );
 
     // Elliptic Theta 3
@@ -276,7 +280,7 @@ function createWaveforms() {
             i += 1;
         } while(value > 0.0001);
         const zeroComponents = Array(harmonics.length).fill(0);
-        PERIODIC_WAVES["theta" + (index+1)] = AUDIO_CTX.createPeriodicWave(new Float32Array(zeroComponents), new Float32Array(harmonics));
+        PERIODIC_WAVES["theta" + (index+1)] = AUDIO_CTX.createPeriodicWave(new Float32Array(harmonics), new Float32Array(zeroComponents));
 
         for (let i = 0; i < harmonics.length; i += 2) {
             harmonics[i] = 0;

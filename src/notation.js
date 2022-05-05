@@ -30,7 +30,7 @@ const MOS_PATTERNS = {
     '5L 4s': 'LsLsLsLsL',
     '6L 3s': 'LsLLsLLsL',
     '7L 2s': 'LLsLLLsLL',
-    '8L 1s': 'LLLsLLL',
+    '8L 1s': 'LLLLsLLLL',
     '1L 9s': 'Lsssssssss',
     '2L 8s': 'ssLssssLss',
     '3L 7s': 'LssLssLsss',

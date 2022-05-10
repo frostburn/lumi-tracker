@@ -1,6 +1,6 @@
 <script>
 import { getHardness } from "../notation.js";
-import { tamnamsName, mosPatternsWithNames } from "../xenwiki.js";
+import { tamnamsName, mosPatternsWithNamesUDP } from "../xenwiki.js";
 
 export default {
   props: {
@@ -20,7 +20,7 @@ export default {
   },
   computed: {
     patterns() {
-      return mosPatternsWithNames(this.countL, this.countS);
+      return mosPatternsWithNamesUDP(this.countL, this.countS);
     },
     footer() {
       let result = getHardness(this.l, this.s);
@@ -88,9 +88,10 @@ export default {
               </span>
             </template>
             <template v-else>
-              <div v-for="[pattern, mode] of patterns">
+              <div v-for="[pattern, mode, udp, isNotationBasis] of patterns">
                 <button @click="selectPattern(pattern)">{{ pattern }}</button>
-                <span>{{ " " + mode }}</span>
+                <span :class="{heavy: isNotationBasis}">{{ " " + udp }}</span>
+                <span :class="{heavy: isNotationBasis}">{{ " " + mode }}</span>
               </div>
             </template>
           </div>
@@ -120,6 +121,10 @@ export default {
 
 .current {
   background: darkgray;
+}
+
+.heavy {
+  font-weight: bold;
 }
 
 </style>

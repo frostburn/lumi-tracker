@@ -1,6 +1,6 @@
 import { mod, gcd, REFERENCE_OCTAVE, toSignedString } from "./util.js";
 
-const MOS_PATTERNS = {
+export const MOS_PATTERNS = {
     '1L 4s': 'ssLss',
     '2L 3s': 'sLsLs',
     '3L 2s': 'LsLsL',
@@ -169,7 +169,7 @@ for (const mos in MOS_PATTERNS) {
     DEGREES_BY_MOS[mos] = degrees;
 }
 
-export function mosPatterns(countL, countS) {
+function mosPatterns(countL, countS) {
     const key = `${countL}L ${countS}s`
     let pattern = MOS_PATTERNS[key];
     const m = gcd(countL, countS);

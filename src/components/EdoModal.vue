@@ -1,6 +1,6 @@
 <script>
 import { MOS_BY_EDO, getHardness } from "../notation.js";
-import { tamnamsName, mosPatternsWithNames } from "../xenwiki.js";
+import { tamnamsName, mosPatternsWithNamesUDP } from "../xenwiki.js";
 
 export default {
   props: {
@@ -19,7 +19,7 @@ export default {
   },
   computed: {
     patterns() {
-      return mosPatternsWithNames(this.countL, this.countS);
+      return mosPatternsWithNamesUDP(this.countL, this.countS);
     },
     mosses() {
       if (this.edo > 8) {
@@ -80,9 +80,10 @@ export default {
               </div>
             </div>
             <template v-else>
-              <div v-for="[pattern, mode] of patterns">
+              <div v-for="[pattern, mode, udp, isNotationBasis] of patterns">
                 <button @click="select(pattern)">{{ pattern }}</button>
-                <span>{{ " " + mode }}</span>
+                <span :class="{heavy: isNotationBasis}">{{ " " + udp }}</span>
+                <span :class="{heavy: isNotationBasis}">{{ " " + mode }}</span>
               </div>
             </template>
           </div>
@@ -107,5 +108,9 @@ export default {
 
 .tall {
   height: 450px;
+}
+
+.heavy {
+  font-weight: bold;
 }
 </style>

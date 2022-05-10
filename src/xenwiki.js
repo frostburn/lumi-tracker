@@ -1,4 +1,6 @@
-import { mosPatterns } from "./notation.js";
+import { gcd } from "./util.js";
+import { mosPatterns } from "./mos.js";
+import { MOS_PATTERNS } from "./notation.js";
 
 const TAMNAMS_MOS_NAMES = {
     // 5-note
@@ -283,9 +285,11 @@ export function tamnamsName(mos) {
     }
 }
 
-export function mosPatternsWithNames(countL, countS) {
+export function mosPatternsWithNamesUDP(countL, countS) {
+    const notationBasis = MOS_PATTERNS[`${countL}L ${countS}s`];
+    const p = gcd(countL, countS);
     const result = [];
-    mosPatterns(countL, countS).forEach(pattern => {
+    mosPatterns(countL, countS).forEach((pattern, down) => {
         let name = "";
         if (pattern in MOS_PATTERN_NAMES) {
             name = MOS_PATTERN_NAMES[pattern];
@@ -295,7 +299,14 @@ export function mosPatternsWithNames(countL, countS) {
         } else if (pattern === "LsLLsLL") {
             name = name + " (Minor)";
         }
-        result.push([pattern, name]);
+        const up = (countL + countS)/p - 1 - down;
+        let udp;
+        if (p === 1) {
+            udp = `${up}|${down}`;
+        } else {
+            udp = `${up*p}|${down*p}(${p})`;
+        }
+        result.push([pattern, name, udp, pattern === notationBasis]);
     });
     return result;
 }

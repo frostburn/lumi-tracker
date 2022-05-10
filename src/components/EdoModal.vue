@@ -5,6 +5,9 @@ import { tamnamsName, mosPatternsWithNamesUDP } from "../xenwiki.js";
 export default {
   props: {
     show: Boolean,
+    currentMos: String,
+    currentL: Number,
+    currentS: Number,
   },
   emits: ["close", "select"],
   data() {
@@ -73,6 +76,7 @@ export default {
                   @click="countL = _countL; countS = _countS; l = _l; s = _s; updateTamnams(_countL, _countS)"
                   @mouseenter="updateTamnams(_countL, _countS)"
                   @focus="updateTamnams(_countL, _countS)"
+                  :class="{ current: `${_countL}L ${_countS}s` === currentMos && _l == currentL && _s == currentS }"
                 >
                   {{ `${_countL}L ${_countS}s` }}
                 </button>
@@ -112,5 +116,9 @@ export default {
 
 .heavy {
   font-weight: bold;
+}
+
+.current {
+  background: darkgray;
 }
 </style>

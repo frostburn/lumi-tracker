@@ -889,28 +889,39 @@ export default {
       }
       this.activeComputerKeys.delete(event.code);
     },
-    addTrack() {
+    addTrack(type) {
+      const instrument = {
+        type,
+        frequencyGlide: 1,
+        attack: 1,
+        release: 2,
+        tableDelta: 20,
+      };
+      if (type === 'noise') {
+        instrument.model = 'uniform';
+        instrument.jitterModel = 'balanced';
+        instrument.jitterType = 'pulseWidth';
+        instrument.bitDepth = 1;
+        instrument.finiteSeed = 0;
+        instrument.finiteLength = 8;
+        instrument.jitterBitDepth = 1;
+        instrument.jitterFiniteLength = 8;
+        instrument.jitterFiniteSeed = 0;
+        instrument.jitterLogisticR = 4;
+        instrument.diffStages = 0;
+        instrument.linear = false;
+        instrument.underSampling = 1;
+      } else if (type === 'monophone') {
+        instrument.waveform = 'pulse';
+        instrument.differentiated = false;
+      } else if (type === 'fm') {
+        instrument.waveform = 'sine';
+        instrument.modulatorFactor = 1;
+        instrument.carrierFactor = 1;
+        instrument.differentiated = false;
+      }
       const track = {
-        instrument: {
-          type: 'noise',
-          frequencyGlide: 1,
-          attack: 1,
-          release: 2,
-          model: 'uniform',
-          jitterModel: 'balanced',
-          jitterType: 'pulseWidth',
-          bitDepth: 1,
-          finiteLength: 8,
-          finiteSeed: 0,
-          jitterBitDepth: 1,
-          jitterFiniteLength: 8,
-          jitterFiniteSeed: 0,
-          jitterLogisticR: 4,
-          diffStages: 0,
-          linear: false,
-          underSampling: 1,
-          tableDelta: 20,
-        },
+        instrument,
         patterns: [],
       };
       while (track.patterns.length < this.song.frames.length) {
@@ -1025,7 +1036,7 @@ export default {
 
     const ctx = getAudioContext();
     this.analyser = ctx.createAnalyser();
-    this.analyser.fftSize = 1024;
+    this.analyser.fftSize = 2048;
     this.globalGain = ctx.createGain();
     this.globalGain.gain.setValueAtTime(0.4, ctx.currentTime);
     this.globalGain.connect(this.analyser).connect(ctx.destination);
@@ -1065,7 +1076,7 @@ export default {
   </Teleport>
 
   <Teleport to="body">
-    <EdoModal ref="edoModal" :show="showEdoModal" @close="showEdoModal = false" @select="chooseEdo" />
+    <EdoModal ref="edoModal" :show="showEdoModal" @close="showEdoModal = false" @select="chooseEdo" :currentMos="mos" :currentL="song.l" :currentS="song.s" />
   </Teleport>
 
   <Teleport to="body">
@@ -1111,7 +1122,9 @@ export default {
     <button @click="play('song')">play song</button>
     <button @click="play('frame')">play frame</button>
     <button @click="stop">stop</button>
-    <button @click="addTrack">add track</button>
+    <button @click="addTrack('monophone')">add mono</button>
+    <button @click="addTrack('fm')">add fm</button>
+    <button @click="addTrack('noise')">add noise</button>
 
     <label for="octave"> Octave: </label>
     <input id="octave" type="number" v-model="octave" />

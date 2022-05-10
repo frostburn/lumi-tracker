@@ -1072,7 +1072,7 @@ export default {
 
 <template>
   <Teleport to="body">
-    <MosModal :show="showMosModal" @close="showMosModal = false" @selectPattern="choosePattern" :currentMos="mos" :l="song.l" :s="song.s" />
+    <MosModal :show="showMosModal" @close="showMosModal = false" @selectPattern="choosePattern" :currentCountL="countL" :currentCountS="countS" :l="song.l" :s="song.s" />
   </Teleport>
 
   <Teleport to="body">

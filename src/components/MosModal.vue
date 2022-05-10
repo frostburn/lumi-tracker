@@ -5,7 +5,8 @@ import { tamnamsName, mosPatternsWithNamesUDP } from "../xenwiki.js";
 export default {
   props: {
     show: Boolean,
-    currentMos: String,
+    currentCountL: Number,
+    currentCountS: Number,
     l: Number,
     s: Number,
   },
@@ -81,7 +82,13 @@ export default {
                   @mouseenter="updateTamnams(l, n-l)"
                   @focus="updateTamnams(l, n-l)"
                   @mousemove.stop
-                  :class="{ current: `${l}L ${n-l}s` === currentMos }"
+                  :class="{
+                    mos: true,
+                    current: l === currentCountL && n-l === currentCountS,
+                    sister: l === currentCountS && n-l === currentCountL,
+                    parent: l === Math.min(currentCountL, currentCountS) && n === Math.max(currentCountL, currentCountS),
+                    daughter: Math.max(l, n-l) === currentCountL + currentCountS && Math.min(l, n-l) === currentCountL
+                  }"
                 >
                   {{l}}L {{n-l}}s
                 </button>
@@ -119,8 +126,20 @@ export default {
    content: "\200B";
 }
 
+.mos {
+  background: #eeeeee;
+}
 .current {
-  background: darkgray;
+  background: #999999;
+}
+.parent {
+  background: #eecccc;
+}
+.sister {
+  background: #cceecc;
+}
+.daughter {
+  background: #ccccee;
 }
 
 .heavy {

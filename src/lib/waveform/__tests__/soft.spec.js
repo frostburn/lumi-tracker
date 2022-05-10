@@ -77,14 +77,15 @@ describe("Soft square", () => {
 });
 
 describe("Soft sinh", () => {
+  const separation = 0.25;
   it("is periodic", () => {
     PHASES.forEach(phase => {
-      expect(softSinh(phase, 0.5)).toBeCloseTo(softSinh(phase+1, 0.5));
+      expect(softSinh(phase, 0.5, separation)).toBeCloseTo(softSinh(phase+1, 0.5, separation));
     });
   });
   it("is continuous around sharpness=0", () => {
     PHASES.forEach(phase => {
-      expect(softSinh(phase, 0.01)).toBeCloseTo(softSinh(phase, 0));
+      expect(softSinh(phase, 0.01, separation)).toBeCloseTo(softSinh(phase, 0, separation));
     });
   });
 });

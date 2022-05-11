@@ -1,66 +1,67 @@
 import { mod, gcd, REFERENCE_OCTAVE, toSignedString } from "./util.js";
 
 export const MOS_PATTERNS = {
-    '1L 4s': 'ssLss',
-    '2L 3s': 'sLsLs',
-    '3L 2s': 'LsLsL',
-    '4L 1s': 'LLsLL',
-    '1L 5s': 'Lsssss',
-    '2L 4s': 'sLssLs',
-    '3L 3s': 'LsLsLs',
-    '4L 2s': 'LsLLsL',
-    '5L 1s': 'LLLLLs',
-    '1L 6s': 'sssLsss',
-    '2L 5s': 'sLsssLs',
-    '3L 4s': 'sLsLsLs',
-    '4L 3s': 'LsLsLsL',
-    '5L 2s': 'LLsLLLs', // 'LsLLLsL',  XXX: Should there be a J version that is Dorian?
-    '6L 1s': 'LLLsLLL',
-    '1L 7s': 'Lsssssss',
-    '2L 6s': 'LsssLsss',
-    '3L 5s': 'sLssLsLs', // 'LsLssLss',
-    '4L 4s': 'LsLsLsLs',
-    '5L 3s': 'LsLLsLsL', // 'LLsLLsLs',
-    '6L 2s': 'LLLsLLLs',
-    '7L 1s': 'LLLLLLLs',
-    '1L 8s': 'ssssLssss',
-    '2L 7s': 'ssLsssLss',
-    '3L 6s': 'sLssLssLs',
-    '4L 5s': 'LsLsLsLss', // 'sLsLsLsLs',
-    '5L 4s': 'LsLsLsLsL',
-    '6L 3s': 'LsLLsLLsL',
-    '7L 2s': 'LLsLLLsLL',
-    '8L 1s': 'LLLLsLLLL',
-    '1L 9s': 'Lsssssssss',
-    '2L 8s': 'ssLssssLss',
-    '3L 7s': 'LssLssLsss',
-    '4L 6s': 'sLsLssLsLs',
-    '5L 5s': 'LsLsLsLsLs',
-    '6L 4s': 'LsLsLLsLsL',
-    '7L 3s': 'LLLsLLsLLs',
-    '8L 2s': 'LLsLLLLsLL',
-    '9L 1s': 'LLLLLLLLLs',
-    '1L 10s': 'sssssLsssss',
-    '2L 9s': 'ssLsssssLss',
-    '3L 8s': 'sLsssLsssLs',
-    '4L 7s': 'LssLsLssLss', // 'sLssLsLssLs',
-    '5L 6s': 'sLsLsLsLsLs',
-    '6L 5s': 'LsLsLsLsLsL',
-    '7L 4s': 'LsLLsLsLLsL',
-    '8L 3s': 'LsLLLsLLLsL',
-    '9L 2s': 'LLsLLLLLsLL',
-    '10L 1s': 'LLLLLsLLLLL',
-    '1L 11s': 'Lsssssssssss',
-    '2L 10s': 'LsssssLsssss',
-    '3L 9s': 'LsssLsssLsss',
-    '4L 8s': 'sLssLssLssLs',
-    '5L 7s': 'LsLsLssLsLss',
-    '6L 6s': 'LsLsLsLsLsLs',
-    '7L 5s': 'LLsLsLLsLsLs',
-    '8L 4s': 'LsLLsLLsLLsL',
-    '9L 3s': 'LLLsLLLsLLLs',
-    '10L 2s': 'LLLLLsLLLLLs',
-    '11L 1s': 'LLLLLLLLLLLs',
+    // Key: basisOfNotation,  // reason for the choice
+    '1L 4s': 'ssLss',  // symmetric = s
+    '2L 3s': 'sLsLs',  // s
+    '3L 2s': 'LsLsL',  // s
+    '4L 1s': 'LLsLL',  // s
+    '1L 5s': 'ssLsss',  // subset of symmetric 6L 1s
+    '2L 4s': 'sLssLs',  // s
+    '3L 3s': 'LsLsLs',  // tonic
+    '4L 2s': 'LsLLsL',  // s
+    '5L 1s': 'LLLsLL',  // superset of symmetric 1L 4s
+    '1L 6s': 'sssLsss',  // s
+    '2L 5s': 'sLsssLs',  // s
+    '3L 4s': 'sLsLsLs',  // s
+    '4L 3s': 'LsLsLsL',  // s
+    '5L 2s': 'LLsLLLs',  // tradition, dorian 'LsLLLsL' would be symmetric
+    '6L 1s': 'LLLsLLL',  // s
+    '1L 7s': 'sssLssss',  // subset of symmetric 8L 1s
+    '2L 6s': 'LsssLsss',  // brightest mode
+    '3L 5s': 'sLssLsLs',  // xenwiki article, anti-srnathian 'LsLssLss' would be brightest
+    '4L 4s': 'LsLsLsLs',  // tonic
+    '5L 3s': 'LsLLsLsL',  // xenwiki article, dylathian 'LLsLLsLs' would be brightest
+    '6L 2s': 'LLLsLLLs',  // brightest
+    '7L 1s': 'LLLLsLLL',  // superset of symmetric 1L 6s
+    '1L 8s': 'ssssLssss',  // s
+    '2L 7s': 'ssLsssLss',  // s
+    '3L 6s': 'sLssLssLs',  // s
+    '4L 5s': 'LsLsLsLss',  // xenwiki article, 'sLsLsLsLs' would be symmetric
+    '5L 4s': 'LsLsLsLsL',  // s
+    '6L 3s': 'LsLLsLLsL',  // s
+    '7L 2s': 'LLsLLLsLL',  // s
+    '8L 1s': 'LLLLsLLLL',  // s
+    '1L 9s': 'ssssLsssss',  // subset of symmetric 10L 1s
+    '2L 8s': 'ssLssssLss',  // s
+    '3L 7s': 'LssLssLsss',  // brightest
+    '4L 6s': 'sLsLssLsLs',  // s
+    '5L 5s': 'LsLsLsLsLs',  // brightest
+    '6L 4s': 'LsLsLLsLsL',  // s
+    '7L 3s': 'LLLsLLsLLs',  // brightest
+    '8L 2s': 'LLsLLLLsLL',  // s
+    '9L 1s': 'LLLLLsLLLL',  // superset of symmetric 1L 8s
+    '1L 10s': 'sssssLsssss',  // s
+    '2L 9s': 'ssLsssssLss',  // s
+    '3L 8s': 'sLsssLsssLs',  // s
+    '4L 7s': 'LssLsLssLss',  // xenwiki article, supersothic 'sLssLsLssLs' would be symmetric,
+    '5L 6s': 'sLsLsLsLsLs',  // s
+    '6L 5s': 'LsLsLsLsLsL',  // s
+    '7L 4s': 'LsLLsLsLLsL',  // s
+    '8L 3s': 'LsLLLsLLLsL',  // s
+    '9L 2s': 'LLsLLLLLsLL',  // s
+    '10L 1s': 'LLLLLsLLLLL',  // s
+    '1L 11s': 'sssssLssssss',  // subset of symmetric 12L 1s
+    '2L 10s': 'LsssssLsssss',  // brightest
+    '3L 9s': 'LsssLsssLsss',  // brightest
+    '4L 8s': 'sLssLssLssLs',  // s
+    '5L 7s': 'LsLsLssLsLss',  // brightest
+    '6L 6s': 'LsLsLsLsLsLs',  // tonic
+    '7L 5s': 'LLsLsLLsLsLs',  // brightest
+    '8L 4s': 'LsLLsLLsLLsL',  // s
+    '9L 3s': 'LLLsLLLsLLLs',  // brightest
+    '10L 2s': 'LLLLLsLLLLLs',  // brightest
+    '11L 1s': 'LLLLLLsLLLLL',  // superset of symmetric 1L 10s
 };
 
 export const MOS_BY_EDO = new Map();

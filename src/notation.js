@@ -2,7 +2,13 @@ import { mod, gcd, REFERENCE_OCTAVE, toSignedString } from "./util.js";
 
 export const MOS_PATTERNS = {
     // Key: basisOfNotation,  // reason for the choice
-    '1L 4s': 'ssLss',  // symmetric = s
+    '1L 1s': 'Ls',  // tonic
+    '1L 2s': 'sLs',  // symmetric = s
+    '2L 1s': 'LsL',  // s
+    '1L 3s': 'sLss',  // subset of symmetric 4L 1s
+    '2L 2s': 'LsLs',  // tonic
+    '3L 1s': 'LLsL',  // superset of symmetric 1L 2s
+    '1L 4s': 'ssLss',  // s
     '2L 3s': 'sLsLs',  // s
     '3L 2s': 'LsLsL',  // s
     '4L 1s': 'LLsLL',  // s

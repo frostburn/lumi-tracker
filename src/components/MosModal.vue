@@ -75,7 +75,7 @@ export default {
 
           <div class="modal-body">
             <template v-if="countL === null">
-              <span class="pyramid-row" v-for="n of [5, 6, 7, 8, 9, 10, 11, 12]">
+              <span class="pyramid-row" v-for="n of [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]">
                 <button
                   v-for="l of n-1"
                   @click="countL=l; countS=(n-l); updateTamnams(l, n-l)"

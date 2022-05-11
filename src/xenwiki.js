@@ -3,6 +3,24 @@ import { mosPatterns } from "./mos.js";
 import { MOS_PATTERNS } from "./notation.js";
 
 const TAMNAMS_MOS_NAMES = {
+    // 2-note
+    "1L 1s": {
+        name: "trivial",
+    },
+    // 3-note
+    "1L 2s": {
+        name: "happy",
+    },
+    "2L 1s": {
+        name: "grumpy",
+    },
+    // 4-note
+    "2L 2s": {
+        name: "bi-equal",
+    },
+    "3L 1s": {
+        name: "happy (superset)",
+    },
     // 5-note
     "2L 3s": {
         name: "pentic",
@@ -157,6 +175,11 @@ const TAMNAMS_MOS_NAMES = {
     // 11-note
     "4L 7s": {
         name: "kleistonic",
+        prefix: "klei",
+    },
+    "7L 4s": {
+        name: "suprasmitonic",
+        prefix: "ssmi",
     },
     // 12-note
     "5L 7s": {
@@ -263,6 +286,18 @@ export const MOS_PATTERN_NAMES = {
     "ssLsLssLssL": "Supernecromic",
     "ssLssLsLssL": "Superalmalexian",
     "ssLssLssLsL": "Superdagothic",
+
+    "sLsLLsLLsLL": "Supranerevarine",
+    "sLLsLsLLsLL": "Supravivecan",
+    "sLLsLLsLsLL": "Suprabaardauan",
+    "sLLsLLsLLsL": "Supralorkhanic",
+    "LsLsLLsLLsL": "Supravvardenic",
+    "LsLLsLsLLsL": "Suprasothic",
+    "LsLLsLLsLsL": "Supranumidian",
+    "LsLLsLLsLLs": "Suprakagrenacan",
+    "LLsLsLLsLLs": "Supranecromic",
+    "LLsLLsLsLLs": "Supraalmalexian",
+    "LLsLLsLLsLs": "Supradagothic",
 };
 
 for (const mos in TAMNAMS_MOS_NAMES) {

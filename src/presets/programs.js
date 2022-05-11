@@ -148,6 +148,38 @@ const PROGRAMS = {
             data: [100, 0],
         },
     },
+    PH: {
+        name: "Hi-hat",
+        amplitude: {
+            data: [100, 14, 2, 1, 0],
+        },
+        timbre: {
+            linear: false,
+            data: [0],
+        },
+        bias: {
+            data: [60, 0],
+        },
+        nat: {
+            data: [10, 0],
+        },
+    },
+    PK: {
+        name: "Kick",
+        amplitude: {
+            data: [100, 61, 37, 22, 14, 8, 5, 3, 2, 1, 0],
+        },
+        timbre: {
+            data: [30, 4, 1, 0],
+        },
+        bias: {
+            linear: false,
+            data: [0],
+        },
+        nat: {
+            data: [200, 90, 0],
+        },
+    },
 };
 
 Object.values(PROGRAMS).forEach(program => {

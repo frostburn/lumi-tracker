@@ -1070,7 +1070,9 @@ export default {
     if (this.fm !== null) {
       this.fm.dispose();
     }
-    this.globalGain.disconnect();
+    if (this.globalGain !== null) {
+      this.globalGain.disconnect();
+    }
     window.removeEventListener("mouseup", this.onMouseUp);
     window.removeEventListener("mouseup", this.selectNothing);
     window.removeEventListener("keydown", this.windowKeydown);

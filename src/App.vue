@@ -358,6 +358,18 @@ export default {
         bottom: Math.max(this.selectStart.rowIndex, this.selectStop.rowIndex),
       };
     },
+    edx() {
+      if (this.song.equave == 2) {
+        return "EDO";
+      }
+      if (this.song.equave == 3) {
+        return "EDT";
+      }
+      if (this.song.equave == 1.5) {
+        return "EDF";
+      }
+      return "EDX";
+    },
   },
   methods: {
     cellFrequency(cell) {
@@ -1072,11 +1084,11 @@ export default {
 
 <template>
   <Teleport to="body">
-    <MosModal :show="showMosModal" @close="showMosModal = false" @selectPattern="choosePattern" :currentCountL="countL" :currentCountS="countS" :l="song.l" :s="song.s" />
+    <MosModal :show="showMosModal" @close="showMosModal = false" @selectPattern="choosePattern" :currentCountL="countL" :currentCountS="countS" :l="song.l" :s="song.s" :edx="edx" />
   </Teleport>
 
   <Teleport to="body">
-    <EdoModal ref="edoModal" :show="showEdoModal" @close="showEdoModal = false" @select="chooseEdo" :currentMos="mos" :currentL="song.l" :currentS="song.s" />
+    <EdoModal ref="edoModal" :show="showEdoModal" @close="showEdoModal = false" @select="chooseEdo" :currentMos="mos" :currentL="song.l" :currentS="song.s" :edx="edx" />
   </Teleport>
 
   <Teleport to="body">
@@ -1090,7 +1102,7 @@ export default {
     <label for="tempo"> BPM: </label>
     <input id="tempo" v-model="song.beatsPerMinute" type="number" min="1" />
 
-    <button id="select-edo" @click="showEdoModal = true; $refs.edoModal.edo = divisions">select EDO</button>
+    <button id="select-edo" @click="showEdoModal = true; $refs.edoModal.edo = divisions">select {{ edx }}</button>
     <button id="select-mos" @click="showMosModal = true">select MOS</button>
     <label for="select-mos"> = {{ song.mosPattern }}</label>
 

@@ -9,6 +9,7 @@ export default {
     currentCountS: Number,
     l: Number,
     s: Number,
+    edx: String,
   },
   emits: ["close", "selectPattern"],
   data() {
@@ -26,7 +27,7 @@ export default {
     footer() {
       let result = getHardness(this.l, this.s);
       if (this.edo) {
-        result += " = " + this.edo.toString() + "EDO";
+        result += " = " + this.edo.toString() + this.edx;
       }
       if (this.tamnamsName) {
         result += " " + this.tamnamsName;

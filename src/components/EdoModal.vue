@@ -8,6 +8,7 @@ export default {
     currentMos: String,
     currentL: Number,
     currentS: Number,
+    edx: String,
   },
   emits: ["close", "select"],
   data() {
@@ -65,7 +66,7 @@ export default {
       <div class="modal-wrapper">
         <div class="modal-container">
           <div class="modal-header">
-            <h1>Select EDO</h1>
+            <h1>Select {{ edx }}</h1>
           </div>
 
           <div class="modal-body">

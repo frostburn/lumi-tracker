@@ -1,8 +1,5 @@
 import { ratioToCents } from "./util.js";
 import PROGRAMS from "./presets/programs.js";
-import noiseWorkletURL from "/src/worklets/noise.js?url"
-import monophoneWorkletURL from "/src/worklets/monophone.js?url"
-import modulatorWorkletURL from "/src/worklets/modulator.js?url"
 
 let AUDIO_CTX;
 // WebAudio API especially on Firefox doesn't perfectly sync AUDIO_CTX.currentTime
@@ -57,10 +54,10 @@ export function getAudioContext() {
 
 export async function loadAudioWorklets() {
     const ctx = getAudioContext();
-    // Relative to index.html
-    await ctx.audioWorklet.addModule(noiseWorkletURL);
-    await ctx.audioWorklet.addModule(monophoneWorkletURL);
-    await ctx.audioWorklet.addModule(modulatorWorkletURL);
+
+    await ctx.audioWorklet.addModule(new URL("../bundles/noise.bundle.min.js", import.meta.url));
+    await ctx.audioWorklet.addModule(new URL("../bundles/monophone.bundle.min.js", import.meta.url));
+    await ctx.audioWorklet.addModule(new URL("../bundles/modulator.bundle.min.js", import.meta.url));
 }
 
 export function suspendAudio() {

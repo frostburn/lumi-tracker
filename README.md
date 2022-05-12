@@ -16,6 +16,17 @@ See [Vite Configuration Reference](https://vitejs.dev/config/).
 npm install
 ```
 
+#### Make sure you have rollup installed
+
+```sh
+npm install --global rollup
+```
+
+### Bundle audio worklets
+```sh
+npm run rollup
+```
+
 ### Compile and Hot-Reload for Development
 
 ```sh

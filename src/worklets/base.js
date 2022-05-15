@@ -1,6 +1,6 @@
 const LOWPASS_TIME_CONSTANT = 0.001;
 
-class BaseProcessor extends AudioWorkletProcessor {
+export default class BaseProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super(options);
     // Time since last onset
@@ -77,5 +77,3 @@ class BaseProcessor extends AudioWorkletProcessor {
     return 0.5**(dt / LOWPASS_TIME_CONSTANT);
   }
 }
-
-export default BaseProcessor;

@@ -12,11 +12,22 @@ export default [
       }
     ],
   },
+  /*
+  // Monophone registered in polyphone module
   {
     input: 'src/worklets/monophone.js',
     output: [
       {
         file: 'bundles/monophone.bundle.min.js',
+        plugins,
+      }
+    ],
+  },*/
+  {
+    input: 'src/worklets/polyphone.js',
+    output: [
+      {
+        file: 'bundles/polyphone.bundle.min.js',
         plugins,
       }
     ],

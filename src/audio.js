@@ -12,6 +12,7 @@ const OSCILLATOR_BANK = [];
 // Not sure about AudioWorkletNode either so let's play it safe and bank them as well.
 const NOISE_BANK = [];
 const MONOPHONE_BANK = [];
+const POLYPHONE_BANK = [];
 const MODULATOR_BANK = [];
 
 const DEFAULT_OSCILLATOR_WAVEFORMS = ["sine", "square", "sawtooth", "triangle"];
@@ -55,9 +56,11 @@ export function getAudioContext() {
 export async function loadAudioWorklets() {
     const ctx = getAudioContext();
 
-    await ctx.audioWorklet.addModule(new URL("../bundles/noise.bundle.min.js", import.meta.url));
-    await ctx.audioWorklet.addModule(new URL("../bundles/monophone.bundle.min.js", import.meta.url));
+    // Monophone registered in polyphone module
+    // await ctx.audioWorklet.addModule(new URL("../bundles/monophone.bundle.min.js", import.meta.url));
+    await ctx.audioWorklet.addModule(new URL("../bundles/polyphone.bundle.min.js", import.meta.url));
     await ctx.audioWorklet.addModule(new URL("../bundles/modulator.bundle.min.js", import.meta.url));
+    await ctx.audioWorklet.addModule(new URL("../bundles/noise.bundle.min.js", import.meta.url));
 }
 
 export function suspendAudio() {
@@ -145,7 +148,7 @@ function disposeNoise(noise) {
 }
 
 function obtainMonophone(
-        waveform="semisine", differentiated=false, tableDelta=0.02, tables=PROGRAMS.P0,
+        waveform="pulse", differentiated=false, tableDelta=0.02, tables=PROGRAMS.P0,
     ) {
     const ctx = getAudioContext();
     let monophone;
@@ -172,6 +175,38 @@ function disposeMonophone(monophone) {
     monophone.parameters.get("bias").cancelScheduledValues(ctx.currentTime);
     monophone.disconnect();
     MONOPHONE_BANK.push(monophone);
+}
+
+function obtainPolyphone(
+        waveform="pulse", differentiated=false, attack=0.005, release=0.05, tableDelta=0.02, tables=PROGRAMS.P0,
+    ) {
+    const ctx = getAudioContext();
+    let polyphone;
+    if (POLYPHONE_BANK.length) {
+        polyphone = POLYPHONE_BANK.pop();
+    } else {
+        polyphone = new AudioWorkletNode(ctx, "polyphone");
+    }
+    polyphone.parameters.get("timbre").setValueAtTime(0, ctx.currentTime);
+    polyphone.parameters.get("bias").setValueAtTime(0, ctx.currentTime);
+    polyphone.port.postMessage({ type: "waveform", value: waveform });
+    polyphone.port.postMessage({ type: "differentiated", value: differentiated });
+    polyphone.port.postMessage({ type: "attack", value: attack });
+    polyphone.port.postMessage({ type: "release", value: release });
+    polyphone.port.postMessage({ type: "tableDelta", value: tableDelta });
+    polyphone.port.postMessage({ type: "tables", value: tables });
+
+    return polyphone;
+}
+
+function disposePolyphone(polyphone) {
+    const ctx = getAudioContext();
+    polyphone.port.postMessage({type: "cancel"});
+    polyphone.parameters.get("nat").cancelScheduledValues(ctx.currentTime);
+    polyphone.parameters.get("timbre").cancelScheduledValues(ctx.currentTime);
+    polyphone.parameters.get("bias").cancelScheduledValues(ctx.currentTime);
+    polyphone.disconnect();
+    POLYPHONE_BANK.push(polyphone);
 }
 
 function obtainModulator(modulatorFactor=1, carrierFactor=1, differentiated=false, tableDelta=0.02, tables=PROGRAMS.P0) {
@@ -319,11 +354,8 @@ export function playFrequencies(cells, instrument, beatDuration, destination) {
     return cancel;
 }
 
-class MonophonicBase {
-    constructor(frequencyGlide=0.001, attack=0.001, release=0.001) {
-        this.frequencyGlide = frequencyGlide;
-        this.attack = attack;
-        this.release = release;
+class InstrumentBase {
+    constructor() {
         const ctx = getAudioContext();
         this._centsToNats = ctx.createGain();
         this._centsToNats.gain.setValueAtTime(Math.log(2)/1200, ctx.currentTime);
@@ -331,8 +363,6 @@ class MonophonicBase {
         this.pitchBend.start(ctx.currentTime);
         this.pitchBend.connect(this._centsToNats);
         this.detune = this.pitchBend.offset;
-        this.envelope = ctx.createGain();
-        this.envelope.gain.setValueAtTime(0, ctx.currentTime);
 
         this.vibratoGain = ctx.createGain();
         this.vibratoDepth = this.vibratoGain.gain;
@@ -341,12 +371,6 @@ class MonophonicBase {
         this.vibratoOscillator.connect(this.vibratoGain).connect(this._centsToNats);
         this.vibratoFrequency = this.vibratoOscillator.frequency;
         this.vibratoFrequency.setValueAtTime(7, ctx.currentTime);
-
-        this.stack = [];
-        this.stackDepletionTime = -10000;
-
-        this.trackPlaying = false;
-        this.lastTrackTime = -10000;
     }
 
     setConfig(config) {
@@ -361,6 +385,30 @@ class MonophonicBase {
         });
     }
 
+    dispose() {
+        disposeOscillator(this.vibratoOscillator);
+        this.pitchBend.disconnect();
+        this.pitchBend.stop();
+    }
+}
+
+class MonophonicBase extends InstrumentBase {
+    constructor(frequencyGlide=0.001, attack=0.001, release=0.001) {
+        super();
+        this.frequencyGlide = frequencyGlide;
+        this.attack = attack;
+        this.release = release;
+        const ctx = getAudioContext();
+        this.envelope = ctx.createGain();
+        this.envelope.gain.setValueAtTime(0, ctx.currentTime);
+
+        this.stack = [];
+        this.stackDepletionTime = -10000;
+
+        this.trackPlaying = false;
+        this.lastTrackTime = -10000;
+    }
+
     setFullConfig(data) {
         this.frequencyGlide = data.frequencyGlide;
         this.attack = data.attack;
@@ -372,9 +420,7 @@ class MonophonicBase {
     }
 
     dispose() {
-        disposeOscillator(this.vibratoOscillator);
-        this.pitchBend.disconnect();
-        this.pitchBend.stop();
+        super.dispose();
         this.envelope.disconnect();
     }
 
@@ -532,5 +578,75 @@ export class FM extends MonophonicBase {
         disposeModulator(this.generator);
         disposeOscillator(this.carrier);
         this.amplitudeEnvelope.disconnect();
+    }
+}
+
+// Max number of concurrent note-ons before things get weird.
+// Needs to be a finite number to leave room for releases.
+const EXPIRED = 10000;
+
+export class Polyphone extends InstrumentBase {
+    constructor(maxPolyphony=12) {
+        super();
+        this.voiceAges = Array(maxPolyphony).fill(EXPIRED);
+        this.generator = obtainPolyphone();
+        this.timbre = this.generator.parameters.get("timbre");
+        this.bias = this.generator.parameters.get("bias");
+        this._centsToNats.connect(this.generator.parameters.get("nat"));
+    }
+
+    getOldestIndex() {
+        let result = 0;
+        this.voiceAges.forEach((age, index) => {
+            if (age > this.voiceAges[result]) {
+                result = index;
+            }
+        });
+        return result;
+    }
+
+    setFullConfig(data) {
+        ["waveform", "differentiated", "tableDelta", "attack", "release"].forEach(type => {
+            this.setConfig({ type, value: data[type] });
+        });
+    }
+
+    connect(destination) {
+        return this.generator.connect(destination);
+    }
+
+    dispose() {
+        super.dispose();
+        disposePolyphone(this.generator);
+    }
+
+    noteOn(frequency, velocity) {
+        const nats = Math.log(frequency);
+        const ctx = getAudioContext();
+        const now = safeNow();
+        const id = this.getOldestIndex();
+        for (let i = 0; i < this.voiceAges.length; ++i) {
+            this.voiceAges[i] += 1;
+        }
+        this.voiceAges[id] = 0;
+        this.setConfig({
+            type: "onset",
+            when: now,
+            id,
+            nats,
+            velocity,
+        });
+
+        function noteOff() {
+            const then = safeNow();
+            this.setConfig({
+                type: "offset",
+                when: then,
+                id,
+            });
+            this.voiceAges[id] = EXPIRED;
+        }
+
+        return noteOff.bind(this);
     }
 }

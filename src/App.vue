@@ -11,7 +11,7 @@ import TimeDomainVisualizer from "./components/TimeDomainVisualizer.vue";
 import { mod, NOTE_OFF, REFERENCE_FREQUENCY, REFERENCE_OCTAVE, ratioToCents, unicodeLength, unicodeSplit } from "./util.js";
 import { mosMonzoToJ, mosMonzoToDiatonic, mosMonzoToSmitonic } from "./notation.js";
 import { suspendAudio, resumeAudio, playFrequencies, getAudioContext, scheduleAction, setAudioDelay, safeNow } from "./audio.js";
-import { Monophone, availableWaveforms, loadAudioWorklets, Noise, availableNoiseModels, FM, availableOscillatorWaveforms } from "./audio.js";
+import { Monophone, Polyphone, availableWaveforms, loadAudioWorklets, Noise, availableNoiseModels, FM, availableOscillatorWaveforms } from "./audio.js";
 import { MIDDLE_C, midiNumberToWhite } from "./midi.js";
 import { Keyboard } from "./keyboard.js";
 import PROGRAMS from "./presets/programs.js";
@@ -34,9 +34,11 @@ export default {
     return {
       globalGain: null,  // Initialized on mounting for convenience
       monophone: null,  // Can only be initialized on mounting
+      polyphone: null,  // same
       noise: null,  // same
       fm: null,  // same
       analyser: null,
+      polymode: true,
       activeInstrument: null,
       activeProgram: "P0",
       computerKeyboard: null,
@@ -161,6 +163,7 @@ export default {
       handler(newValue) {
         if (newValue.type === 'monophone') {
           this.configureInstrument(this.monophone, newValue);
+          this.configureInstrument(this.polyphone, newValue);
         } else if (newValue.type === "noise") {
           this.configureInstrument(this.noise, newValue);
         } else if (newValue.type === "fm") {
@@ -172,6 +175,7 @@ export default {
     activeProgram(newValue) {
       if (newValue in PROGRAMS) {
         this.monophone.setProgram(PROGRAMS[newValue]);
+        this.polyphone.setProgram(PROGRAMS[newValue]);
         this.noise.setProgram(PROGRAMS[newValue]);
         this.fm.setProgram(PROGRAMS[newValue]);
       }
@@ -203,6 +207,9 @@ export default {
         if (this.monophone !== null) {
           this.monophone.timbre.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
         }
+        if (this.polyphone !== null) {
+          this.polyphone.timbre.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
         if (this.fm !== null) {
           this.fm.timbre.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
         }
@@ -215,6 +222,9 @@ export default {
         }
         if (this.monophone !== null) {
           this.monophone.bias.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+        if (this.polyphone !== null) {
+          this.polyphone.bias.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
         }
         if (this.fm !== null) {
           this.fm.bias.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
@@ -229,6 +239,9 @@ export default {
         if (this.monophone !== null) {
           this.monophone.vibratoDepth.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
         }
+        if (this.polyphone !== null) {
+          this.polyphone.vibratoDepth.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
         if (this.fm !== null) {
           this.fm.vibratoDepth.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
         }
@@ -241,6 +254,9 @@ export default {
         }
         if (this.monophone !== null) {
           this.monophone.vibratoFrequency.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
+        }
+        if (this.polyphone !== null) {
+          this.polyphone.vibratoFrequency.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
         }
         if (this.fm !== null) {
           this.fm.vibratoFrequency.setTargetAtTime(newValue, safeNow(), CONTROL_TIME);
@@ -533,6 +549,9 @@ export default {
         return monzo;
     },
     noteOn(monzo, velocity) {
+      if (this.monophone === null || this.polyphone === null || this.fm === null || this.noise === null) {
+        return () => {};
+      }
       if (this.divisions === 0) {
         return () => {};
       }
@@ -545,7 +564,11 @@ export default {
       if (this.inputMode === null) {
         const frequency = this.song.baseFrequency * Math.exp(this.natsL * monzo[0] + this.natsS * monzo[1]);
         if (this.activeInstrument.type === "monophone") {
-          return this.monophone.noteOn(frequency, velocity / 0xFF);
+          if (this.polymode) {
+            return this.polyphone.noteOn(frequency, velocity / 0xFF);
+          } else {
+            return this.monophone.noteOn(frequency, velocity / 0xFF);
+          }
         } else if (this.activeInstrument.type === "noise") {
           return this.noise.noteOn(frequency, velocity / 0xFF);
         } else if (this.activeInstrument.type === "fm") {
@@ -614,6 +637,7 @@ export default {
 
       function pitchBend(e) {
         this.monophone.detune.setTargetAtTime(this.pitchBendDepth * e.value, safeNow(), 0.0001);
+        this.polyphone.detune.setTargetAtTime(this.pitchBendDepth * e.value, safeNow(), 0.0001);
         this.noise.detune.setTargetAtTime(this.pitchBendDepth * e.value, safeNow(), 0.0001);
         this.fm.detune.setTargetAtTime(this.pitchBendDepth * e.value, safeNow(), 0.0001);
       }
@@ -1026,6 +1050,9 @@ export default {
     loadLocalStorage() {
       this.song = this.fromJSON(window.localStorage.lumiTrackerSong);
     },
+    updatePolymode(value) {
+      this.polymode = value;
+    },
   },
   async mounted() {
     this.activeInstrument = this.song.tracks[0].instrument;
@@ -1042,9 +1069,11 @@ export default {
     }
     await loadAudioWorklets();
     this.monophone = new Monophone();
+    this.polyphone = new Polyphone();
     this.noise = new Noise();
     this.fm = new FM();
     this.configureInstrument(this.monophone, this.activeInstrument);
+    this.configureInstrument(this.polyphone, this.activeInstrument);
 
     const ctx = getAudioContext();
     this.analyser = ctx.createAnalyser();
@@ -1054,6 +1083,7 @@ export default {
     this.globalGain.connect(this.analyser).connect(ctx.destination);
 
     this.monophone.connect(this.globalGain);
+    this.polyphone.connect(this.globalGain);
     this.noise.connect(this.globalGain);
     this.fm.connect(this.globalGain);
   },
@@ -1063,6 +1093,9 @@ export default {
     this.computerKeyboard.dispose();
     if (this.monophone !== null) {
       this.monophone.dispose();
+    }
+    if (this.polyphone !== null) {
+      this.polyphone.dispose();
     }
     if (this.noise !== null) {
       this.noise.dispose();
@@ -1094,7 +1127,7 @@ export default {
   </Teleport>
 
   <Teleport to="body">
-    <InstrumentModal :show="showInstrumentModal" @close="showInstrumentModal = false" :instrument="activeInstrument" />
+    <InstrumentModal :show="showInstrumentModal" @close="showInstrumentModal = false" :instrument="activeInstrument" :polymode="polymode" @update:polymode="updatePolymode" />
   </Teleport>
 
   <div>

@@ -5,11 +5,16 @@ export default {
   props: {
     show: Boolean,
     instrument: Object,
+    polymode: Boolean,
   },
-  emits: ["close"],
+  emits: ["close", "update:polymode"],
   computed: {
     noiseModels() {
       return availableNoiseModels();
+    },
+    polymodeModel: {
+      get() { return this.polymode },
+      set (value) { this.$emit('update:polymode', value) },
     },
   },
 }
@@ -36,6 +41,8 @@ export default {
             <template v-if="instrument.type == 'monophone'">
               <label for="differentiated"> Differentiated: </label>
               <input id="differentiated" type="checkbox" v-model="instrument.differentiated" />
+              <label for="polymode"> Live polyphonic: </label>
+              <input id="polymode" type="checkbox" v-model="polymodeModel" />
             </template>
             <template v-if="instrument.type === 'fm'">
               <label for="modulator-factor"> Modulator Factor: </label>

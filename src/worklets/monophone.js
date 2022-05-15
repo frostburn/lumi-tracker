@@ -51,7 +51,7 @@ function smoothTent(phase, sharpness, bias) {
 
 const BIASABLE = [lissajous21, lissajous13, lissajous23, lissajous25, lissajous34, lissajous35, smoothPulse, smoothTent, smoothSinh];
 
-function biased(phase, x) {
+export function biased(phase, x) {
   phase -= Math.floor(phase + 0.5);
   if (Math.abs(phase) < x) {
     return 0.25 * phase / x;
@@ -62,7 +62,7 @@ function biased(phase, x) {
   return 0.25 * (phase + x) / (0.5 - x) - 0.25;
 }
 
-class Monophone extends BaseProcessor {
+export class Monophone extends BaseProcessor {
 
   // Static getter to define AudioParam objects in this custom processor.
   static get parameterDescriptors() {
@@ -92,7 +92,7 @@ class Monophone extends BaseProcessor {
     this.bias = 0;
     this.amplitude = 1;
 
-    this.waveform = smoothSemisine;
+    this.waveform = smoothPulse;
     this.biasable = BIASABLE.includes(this.waveform);
 
     this.tables = {
@@ -232,4 +232,5 @@ class Monophone extends BaseProcessor {
   }
 }
 
-registerProcessor('monophone', Monophone);
+// Registered in subclass module to avoid double call
+// registerProcessor('monophone', Monophone);
